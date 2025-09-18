@@ -40,17 +40,17 @@ export default function Login() {
           placeholder="Username"
           value={username}
           onChange={(e) => setUsername(e.target.value)}
-          className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
         />
         <input
           type="password"
           placeholder="Password"
           value={password}
           onChange={(e) => setPassword(e.target.value)}
-          className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="w-full border px-3 py-2 rounded focus:outline-none focus:ring-2 focus:ring-orange-500"
         />
 
-        <button className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700">
+        <button className="w-full bg-orange-600 text-white py-2 rounded hover:bg-orange-700">
           Login
         </button>
       </form>
