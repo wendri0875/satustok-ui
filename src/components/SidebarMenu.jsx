@@ -14,7 +14,7 @@ export default function SidebarMenu() {
     {
       title: "🏬 Store Management",
       subItems: [
-        { name: "Daftar Marketplace & Toko", path: "/store-list" },
+        { name: "Daftar Toko", path: "/store-list" },
         { name: "Hubungkan Toko Baru", path: "/add-store" },
         { name: "Master Toko", path: "/store-master" },
       ],
@@ -48,21 +48,24 @@ export default function SidebarMenu() {
     <nav className="p-4 space-y-4">
       {menuItems.map((item, idx) => (
         <div key={idx}>
-          <div className="font-bold py-2">{item.title}</div>
+          <div className="font-bold py-2 text-gray-700">{item.title}</div>
           <div className="pl-4 space-y-1">
-            {item.subItems.map((sub, sidx) => (
-              <Link
-                key={sidx}
-                to={sub.path}
-                className={`block py-1 px-2 rounded cursor-pointer ${
-                  location.pathname === sub.path
-                    ? "bg-blue-200 font-semibold"
-                    : "hover:bg-gray-200"
-                }`}
-              >
-                {sub.name}
-              </Link>
-            ))}
+            {item.subItems.map((sub, sidx) => {
+              const isActive = location.pathname === sub.path;
+              return (
+                <Link
+                  key={sidx}
+                  to={sub.path}
+                  className={`block py-1 px-2 rounded cursor-pointer transition ${
+                    isActive
+                      ? "bg-[#EE4D2D] text-white font-semibold"
+                      : "hover:bg-orange-100 hover:text-[#EE4D2D]"
+                  }`}
+                >
+                  {sub.name}
+                </Link>
+              );
+            })}
           </div>
         </div>
       ))}

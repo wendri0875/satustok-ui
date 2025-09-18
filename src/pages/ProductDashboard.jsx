@@ -50,7 +50,7 @@ export default function ProductDashboard() {
                 </p>
               </div>
             </div>
-            <span className="text-blue-600 font-medium">
+            <span className="text-orange-600 font-medium">
               {expandedProduct === product.product_id ? "▲ Tutup" : "▼ Buka"}
             </span>
           </div>

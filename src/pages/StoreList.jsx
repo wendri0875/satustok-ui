@@ -10,8 +10,8 @@ export default function StoreList() {
   const initialStores = [
     { id: 1, marketplace: "Shopee", storeName: "Toko A", status: "Aktif", isMaster: false },
     { id: 2, marketplace: "Shopee", storeName: "Toko B", status: "Aktif", isMaster: true },
-    { id: 3, marketplace: "Tokopedia", storeName: "Toko C", status: "Aktif", isMaster: false },
-    { id: 4, marketplace: "TikTok Shop", storeName: "Toko D", status: "Aktif", isMaster: false },
+    { id: 3, marketplace: "Shopee", storeName: "Toko C", status: "Aktif", isMaster: false },
+    { id: 4, marketplace: "Shopee", storeName: "Toko D", status: "Aktif", isMaster: false },
   ];
 
   const [stores, setStores] = useState(initialStores);
@@ -117,7 +117,7 @@ export default function StoreList() {
           <h2 className="text-xl font-bold">Toko Client</h2>
           <button
             onClick={() => setShowModal(true)}
-            className="px-3 py-2 bg-blue-600 text-white rounded-lg shadow hover:bg-blue-700"
+            className="px-3 py-2 bg-orange-600 text-white rounded-lg shadow hover:bg-orange-700"
           >
             + Tambah Toko
           </button>
@@ -183,7 +183,7 @@ export default function StoreList() {
                   </div>
                   <button
                     onClick={() => setMaster(store)}
-                    className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700"
+                    className="px-3 py-1 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700"
                   >
                     Jadikan Master
                   </button>
@@ -209,15 +209,15 @@ export default function StoreList() {
               />
             </div>
             <div className="mb-4">
-              <label className="block text-sm mb-1">Marketplace</label>
+              <label className="block text-sm mb-1">Keterangan</label>
               <select
                 value={newMarketplace}
                 onChange={(e) => setNewMarketplace(e.target.value)}
                 className="w-full border px-3 py-2 rounded-lg"
               >
                 <option value="Shopee">Shopee</option>
-                <option value="Tokopedia">Tokopedia</option>
-                <option value="TikTok Shop">TikTok Shop</option>
+               {/* <option value="Tokopedia">Tokopedia</option>
+                <option value="TikTok Shop">TikTok Shop</option>*/}
               </select>
             </div>
             <div className="flex justify-end gap-2">
@@ -229,7 +229,7 @@ export default function StoreList() {
               </button>
               <button
                 onClick={saveNewStore}
-                className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                className="px-3 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700"
               >
                 Simpan
               </button>

@@ -21,10 +21,10 @@ export default function Header() {
   }, []);
 
   return (
-    <header className="flex justify-between items-center p-4 bg-blue-600 text-white">
+    <header className="flex justify-between items-center p-4 bg-[#EE4D2D] text-white">
       <Link to="/" className="flex items-center space-x-3">
           <img src={logo} alt="Logo" className="h-8 w-8" />
-          <span className="text-xl font-bold">Satu Stok</span>
+          <span className="text-xl font-bold">Al-Hayya Gamis Dashboard</span>
         </Link>
 
       {user && (
@@ -32,7 +32,7 @@ export default function Header() {
           {/* Avatar */}
           <button
             onClick={() => setOpen(!open)}
-            className="w-10 h-10 rounded-full bg-white text-blue-600 flex items-center justify-center font-bold"
+            className="w-10 h-10 rounded-full bg-white text-[#EE4D2D] flex items-center justify-center font-bold"
           >
             {user.name[0].toUpperCase()}
           </button>
