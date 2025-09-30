@@ -15,8 +15,6 @@ export default function SidebarMenu() {
       title: "🏬 Store Management",
       subItems: [
         { name: "Daftar Toko", path: "/store-list" },
-        { name: "Hubungkan Toko Baru", path: "/add-store" },
-        { name: "Master Toko", path: "/store-master" },
       ],
     },
     {
