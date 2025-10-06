@@ -42,16 +42,11 @@ export default function StoreList() {
       } catch {
         throw new Error("Respon bukan JSON, kemungkinan HTML error/expired link");
       }
+    // ✅ ambil array-nya dari field shops
+       const shops = Array.isArray(data.shops) ? data.shops : [];
 
-      const formatted = data.shops.map((shop) => ({
-        id: shop.shop_id,
-        marketplace: shop.platform,
-        storeName: shop.shop_name,
-        status: "Aktif",
-        isMaster: shop.is_master === 1,
-      }));
-
-      setStores(formatted);
+       //console.log(shops);
+      setStores(shops);
     } catch (err) {
       setError(err.message || "Terjadi kesalahan");
     } finally {
@@ -74,16 +69,18 @@ export default function StoreList() {
     }
   }, [location, navigate]);
 
-  const masterStore = stores.find((s) => s.isMaster);
-  const clientStores = stores.filter((s) => !s.isMaster);
+  const masterStore = stores.find((s) => s.is_master);
+  const clientStores = stores.filter((s) => !s.is_master);
+
+
 
   const setMaster = async (store) => {
-    if (store.isMaster) return;
-    if (!window.confirm(`Jadikan "${store.storeName}" sebagai master?`)) return;
+    if (store.is_master) return;
+    if (!window.confirm(`Jadikan "${store.shop_name}" sebagai master?`)) return;
 
     try {
       const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/shops/${store.id}/master`,
+        `${import.meta.env.VITE_BACKEND_URL}/shops/${store.shop_id}/master`,
         {
           method: "PUT",
           headers: {
@@ -103,9 +100,10 @@ export default function StoreList() {
       setStores(
         stores.map((s) => ({
           ...s,
-          isMaster: s.id === store.id,
+          is_master: s.shop_id === store.shop_id ? 1 : 0,
         }))
       );
+
       setSelectedIds([]);
     } catch (err) {
       alert(err.message);
@@ -172,6 +170,36 @@ export default function StoreList() {
 };
 
 
+
+const handleReconnect = async (store) => {
+  if (store.platform.toLowerCase() === "shopee") {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/shopee-auth/login`,
+        {
+          headers: {
+            Authorization: `Bearer ${user?.token}`,
+            "ngrok-skip-browser-warning": "true",
+          },
+        }
+      );
+      const text = await res.text();
+      if (!res.ok) throw new Error(text);
+      const data = JSON.parse(text);
+      if (data.login_url) {
+        window.location.href = data.login_url;
+      } else {
+        alert("Tidak mendapat login_url dari server");
+      }
+    } catch (err) {
+      alert(err.message || "Gagal hubungkan ulang Shopee");
+    }
+  } else if (store.platform.toLowerCase() === "tiktok shop") {
+    alert("Reconnect TikTok belum dibuat");
+  }
+};
+
+
   if (loading) return <p className="p-6">Loading...</p>;
   if (error) return <p className="p-6 text-red-600">{error}</p>;
 
@@ -189,14 +217,23 @@ export default function StoreList() {
           <div className="flex items-center justify-between p-3 bg-white rounded-lg border">
             <div className="flex items-center gap-3">
               <span className="text-2xl">
-                {logos[masterStore.marketplace.trim().toLowerCase()] || "🏬"}
+                {logos[masterStore.platform.trim().toLowerCase()] || "🏬"}
               </span>
               <div>
-                <p className="font-semibold">{masterStore.storeName}</p>
-                <p className="text-sm text-gray-500">{masterStore.marketplace}</p>
+                <p className="font-semibold">{masterStore.shop_name}</p>
+                <p className="text-sm text-gray-500">{masterStore.platform}</p>
               </div>
             </div>
-            <span className="text-green-600 font-medium">{masterStore.status}</span>
+           {masterStore.status === "Aktif" ? (
+                <span className="text-green-600 font-medium">Aktif</span>
+              ) : (
+                <button
+                  onClick={() => handleReconnect(masterStore)}
+                  className="px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
+                >
+                  Hubungkan Ulang
+                </button>
+              )}
           </div>
         ) : (
           <p className="text-gray-500">Belum ada master toko</p>
@@ -253,31 +290,41 @@ export default function StoreList() {
             <div className="divide-y">
               {clientStores.map((store) => (
                 <div
-                  key={store.id}
+                  key={store.shop_id}
                   className="flex items-center justify-between p-3 bg-white"
                 >
                   <div className="flex items-center gap-3">
                     <input
                       type="checkbox"
-                      checked={selectedIds.includes(store.id)}
-                      onChange={() => toggleSelect(store.id)}
+                      checked={selectedIds.includes(store.shop_id)}
+                      onChange={() => toggleSelect(store.shop_id)}
                     />
                     <div className="flex items-center gap-2">
                       <span className="text-xl">
-                        {logos[store.marketplace.trim().toLowerCase()] || "🏬"}
+                        {logos[store.platform.trim().toLowerCase()] || "🏬"}
                       </span>
                       <div>
-                        <p className="font-medium">{store.storeName}</p>
-                        <p className="text-sm text-gray-500">{store.marketplace}</p>
+                        <p className="font-medium">{store.shop_name}</p>
+                        <p className="text-sm text-gray-500">{store.platform}</p>
                       </div>
                     </div>
                   </div>
-                  <button
-                    onClick={() => setMaster(store)}
-                    className="px-3 py-1 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700"
-                  >
-                    Jadikan Master
-                  </button>
+                      {/* Status */}
+                      {store.status === "Aktif" ? (
+                        <button
+                          onClick={() => setMaster(store)}
+                          className="px-3 py-1 bg-orange-600 text-white text-sm rounded-lg hover:bg-orange-700"
+                        >
+                          Jadikan Master
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleReconnect(store)}
+                          className="px-3 py-1 bg-red-600 text-white text-sm rounded-lg hover:bg-red-700"
+                        >
+                          Hubungkan Ulang
+                        </button>
+                      )}
                 </div>
               ))}
             </div>

@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo } from "react";
 import { useAuth } from "../auth/AuthProvider";
 
 export default function ProductDashboard() {
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const [expandedProduct, setExpandedProduct] = useState(null);
   const [allProducts, setAllProducts] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -27,10 +27,21 @@ export default function ProductDashboard() {
           },
         });
 
+        if (res.status === 401) {
+        logout(); // otomatis clear session & redirect ke login
+        return;
+        }
+
         if (!res.ok) throw new Error("Gagal fetch shops");
 
         const data = await res.json();
         const master = data?.shops?.find((s) => s.is_master === 1);
+        
+        if (!master) {
+        setLoading(false);
+        setError("Tidak ada master toko, produk tidak bisa diambil");
+      }
+
         setMasterShop(master || null);
       } catch (err) {
         console.error("Gagal fetch master shop:", err);
@@ -39,7 +50,7 @@ export default function ProductDashboard() {
     };
 
     fetchMasterShop();
-  }, [user, backendUrl]);
+  }, [user, backendUrl, logout]);
 
   /** 🔹 Ambil produk */
   const fetchProducts = useCallback(async () => {
@@ -60,7 +71,7 @@ export default function ProductDashboard() {
       });
 
       const data = await res.json();
-
+    //  console.log(data);
       if (!res.ok) {
         if (data?.error === "invalid_acceess_token") {
           setError("Token Shopee invalid, silakan hubungkan ulang toko.");
