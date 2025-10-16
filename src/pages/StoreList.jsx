@@ -45,6 +45,8 @@ export default function StoreList() {
     // ✅ ambil array-nya dari field shops
        const shops = Array.isArray(data.shops) ? data.shops : [];
 
+     //  console.log("shops:",shops);
+
        //console.log(shops);
       setStores(shops);
     } catch (err) {
@@ -63,7 +65,15 @@ export default function StoreList() {
     const params = new URLSearchParams(location.search);
     if (params.get("status") === "success") {
       const shopName = params.get("shop_name") || "Toko";
-      setNotification(`✅ ${shopName} berhasil ditambahkan!`);
+      const platform = params.get("platform"); // Tambahkan ini
+         // Tentukan notifikasi berdasarkan platform
+    let notifText = `✅ ${shopName} berhasil ditambahkan!`;
+    if (platform === "shopee") {
+      notifText = `${shopName} (Shopee) berhasil ditambahkan!`;
+    } else if (platform === "tiktok") {
+      notifText = `${shopName} (TikTok) berhasil ditambahkan!`;
+    }
+      setNotification(notifText);
       fetchStores();
       navigate("/store-list", { replace: true }); // bersihkan query
     }
@@ -132,46 +142,61 @@ export default function StoreList() {
   };
 
   const handleConnectStore = async () => {
-  if (newMarketplace === "shopee") {
-    try {
-      const res = await fetch(
-        `${import.meta.env.VITE_BACKEND_URL}/shopee-auth/login`,
-        { headers: { Authorization: `Bearer ${user?.token}`,
-          "ngrok-skip-browser-warning": "true", // penting biar gak kena banner HTML
-       } }
-      );
-
-      const text = await res.text(); // ambil mentah
-      console.log("Response dari server:", text);
-
-      if (!res.ok) {
-        throw new Error(`Server error: ${text}`);
-      }
-
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch (err) {
-        throw new Error("Respon bukan JSON, kemungkinan error/redirect HTML");
-      }
-
-      if (data.login_url) {
-        window.location.href = data.login_url;
-      } else {
-        alert("Tidak mendapat login_url dari server");
-      }
-    } catch (err) {
-      console.error("Gagal hubungkan Shopee:", err);
-      alert(err.message || "Gagal hubungkan Shopee");
+  try {
+    // pastikan user login
+    if (!user?.token) {
+      alert("Silakan login terlebih dahulu");
+      return;
     }
-  } else {
-    alert(`Marketplace ${newMarketplace} belum didukung`);
+
+    let endpoint = "";
+    if (newMarketplace === "shopee") {
+      endpoint = `${import.meta.env.VITE_BACKEND_URL}/shopee-auth/login`;
+    } else if (newMarketplace === "tiktok shop") {
+      endpoint = `${import.meta.env.VITE_BACKEND_URL}/tiktok-auth/login`;
+    } else {
+      alert(`Marketplace ${newMarketplace} belum didukung`);
+      return;
+    }
+
+    // 🔹 panggil endpoint backend sesuai platform
+    const res = await fetch(endpoint, {
+      headers: {
+        Authorization: `Bearer ${user.token}`,
+        "ngrok-skip-browser-warning": "true",
+      },
+    });
+
+    const text = await res.text();
+    console.log(`Response dari server (${newMarketplace}):`, text);
+
+    if (!res.ok) {
+      throw new Error(`Server error: ${text}`);
+    }
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      throw new Error("Respon bukan JSON, kemungkinan error/redirect HTML");
+    }
+
+    if (data.login_url) {
+      console.log(`🔗 Redirect ke halaman login ${newMarketplace}`);
+      window.location.href = data.login_url;
+    } else {
+      alert(`Tidak mendapat login_url dari server untuk ${newMarketplace}`);
+    }
+  } catch (err) {
+    console.error(`Gagal hubungkan ${newMarketplace}:`, err);
+    alert(err.message || `Gagal hubungkan ${newMarketplace}`);
   }
 };
 
 
-
 const handleReconnect = async (store) => {
+
+  console.log (store);
   if (store.platform.toLowerCase() === "shopee") {
     try {
       const res = await fetch(
@@ -194,8 +219,28 @@ const handleReconnect = async (store) => {
     } catch (err) {
       alert(err.message || "Gagal hubungkan ulang Shopee");
     }
-  } else if (store.platform.toLowerCase() === "tiktok shop") {
-    alert("Reconnect TikTok belum dibuat");
+  } else if (store.platform.toLowerCase() === "tiktok") {
+    try {
+      const res = await fetch(
+        `${import.meta.env.VITE_BACKEND_URL}/tiktok-auth/login`,
+        {
+          headers: {
+            Authorization: `Bearer ${user?.token}`,
+            "ngrok-skip-browser-warning": "true",
+          },
+        }
+      );
+      const text = await res.text();
+      if (!res.ok) throw new Error(text);
+      const data = JSON.parse(text);
+      if (data.login_url) {
+        window.location.href = data.login_url;
+      } else {
+        alert("Tidak mendapat login_url dari server");
+      }
+    } catch (err) {
+      alert(err.message || "Gagal hubungkan tiktok");
+    }
   }
 };
 
