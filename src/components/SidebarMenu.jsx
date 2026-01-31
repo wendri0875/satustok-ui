@@ -1,6 +1,6 @@
 import { Link, useLocation } from "react-router-dom";
 
-export default function SidebarMenu() {
+export default function SidebarMenu({ onSelect }) {
   const location = useLocation();
 
   const menuItems = [
@@ -12,10 +12,15 @@ export default function SidebarMenu() {
       ],
     },
     {
-      title: "🏬 Store Management",
+      title: "🔴 Live",
       subItems: [
-        { name: "Daftar Toko", path: "/store-list" },
+        { name: "Asisten Host", path: "/host-assistant" },
+        { name: "Live Product", path: "/live-products" },
       ],
+    },
+    {
+      title: "🏬 Store Management",
+      subItems: [{ name: "Daftar Toko", path: "/store-list" }],
     },
     {
       title: "📊 Inventory",
@@ -46,19 +51,26 @@ export default function SidebarMenu() {
     <nav className="p-4 space-y-4">
       {menuItems.map((item, idx) => (
         <div key={idx}>
-          <div className="font-bold py-2 text-gray-700">{item.title}</div>
+          <div className="font-bold py-2 text-gray-700">
+            {item.title}
+          </div>
+
           <div className="pl-4 space-y-1">
             {item.subItems.map((sub, sidx) => {
               const isActive = location.pathname === sub.path;
+
               return (
                 <Link
                   key={sidx}
                   to={sub.path}
-                  className={`block py-1 px-2 rounded cursor-pointer transition ${
-                    isActive
-                      ? "bg-[#EE4D2D] text-white font-semibold"
-                      : "hover:bg-orange-100 hover:text-[#EE4D2D]"
-                  }`}
+                  onClick={() => onSelect && onSelect()}
+                  className={`block py-1 px-2 rounded cursor-pointer transition
+                    ${
+                      isActive
+                        ? "bg-[#EE4D2D] text-white font-semibold"
+                        : "hover:bg-orange-100 hover:text-[#EE4D2D]"
+                    }
+                  `}
                 >
                   {sub.name}
                 </Link>

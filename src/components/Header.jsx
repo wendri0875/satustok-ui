@@ -4,7 +4,7 @@ import { useAuth } from "../auth/AuthProvider";
 import logo from "/images/favicon.png";
 import { Link } from "react-router-dom";
 
-export default function Header() {
+export default function Header({ onMenuClick }) {
   const { user, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const menuRef = useRef(null);
@@ -22,11 +22,26 @@ export default function Header() {
 
   return (
     <header className="flex justify-between items-center p-4 bg-[#EE4D2D] text-white">
-      <Link to="/" className="flex items-center space-x-3">
-        <img src={logo} alt="Logo" className="h-8 w-8" />
-        <span className="text-xl font-bold">Al-Hayya Gamis Dashboard</span>
-      </Link>
+      {/* KIRI: tombol menu (mobile) + logo */}
+      <div className="flex items-center space-x-3">
+        {/* Tombol menu mobile */}
+        <button
+          onClick={onMenuClick}
+          className="md:hidden text-2xl font-bold"
+          aria-label="Open menu"
+        >
+          ☰
+        </button>
 
+        <Link to="/" className="flex items-center space-x-3">
+          <img src={logo} alt="Logo" className="h-8 w-8" />
+          <span className="text-xl font-bold hidden sm:inline">
+            Al-Hayya Gamis Dashboard
+          </span>
+        </Link>
+      </div>
+
+      {/* KANAN: user menu */}
       {user && (
         <div className="relative" ref={menuRef}>
           {/* Avatar */}
@@ -40,7 +55,9 @@ export default function Header() {
           {/* Dropdown */}
           {open && (
             <div className="absolute right-0 mt-2 w-48 bg-white text-gray-800 rounded shadow-lg z-50">
-              <div className="px-4 py-2 border-b">{user?.username}</div>
+              <div className="px-4 py-2 border-b">
+                {user?.username}
+              </div>
               <button
                 onClick={logout}
                 className="w-full text-left px-4 py-2 hover:bg-gray-100"

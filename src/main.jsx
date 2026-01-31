@@ -9,6 +9,9 @@ import ProductDashboard from "./pages/ProductDashboard";
 import DashboardLayout from "./layouts/DashboardLayout";
 import ComingSoon from "./pages/ComingSoon";
 import StoreList from "./pages/StoreList";
+import HostAssistant from "./pages/HostAssistant";
+import LiveProducts from "./pages/LiveProducts";
+import StockHistory from "./pages/StockHistory";
 
 import "./index.css";
 
@@ -55,6 +58,28 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               </PrivateRoute>
             }
           />
+
+          <Route
+            path="/host-assistant"
+            element={
+              <PrivateRoute>
+                <DashboardLayout>
+                  <HostAssistant />
+                </DashboardLayout>
+              </PrivateRoute>
+            }
+          />
+
+          <Route
+            path="/live-products"
+            element={
+              <PrivateRoute>
+                <DashboardLayout>
+                  <LiveProducts />
+                </DashboardLayout>
+              </PrivateRoute>
+            }
+          />
           <Route
             path="/add-store"
             element={
@@ -92,7 +117,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             element={
               <PrivateRoute>
                 <DashboardLayout>
-                  <ComingSoon title="Riwayat Perubahan Stok" />
+                  <StockHistory />
                 </DashboardLayout>
               </PrivateRoute>
             }
@@ -112,7 +137,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
             element={
               <PrivateRoute>
                 <DashboardLayout>
-                  <ComingSoon title="Order dari Semua Toko" />
+                  <ComingSoon title="Semua Order" />
                 </DashboardLayout>
               </PrivateRoute>
             }
