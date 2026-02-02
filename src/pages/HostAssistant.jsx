@@ -12,7 +12,7 @@ export default function HostAssistant() {
   const { user } = useAuth();
 
   const [status, setStatus] = useState("offline"); // online | connecting | offline
-  const [username, setUsername] = useState("");
+  const [username, setUsername] = useState("alhayya_gamis");
   const [messages, setMessages] = useState([]);
 
   const wsRef = useRef(null);

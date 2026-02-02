@@ -1,32 +1,154 @@
-import { useState,useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useAuth } from "../auth/AuthProvider";
 
 export default function LiveProductSatustok() {
   const { user } = useAuth();
 
-  useEffect(() => {
-    if (!user?.token) return;
-  }, [user]);
-
-  const [products, setProducts] = useState([
-    { code: "GA.64", desc: "Gamis Zahra – Adem & lembut", photo: null },
-    { code: "GA.77", desc: "Busui Friendly – Jatuh", photo: null },
-  ]);
+  const [tiktokAccount, setTiktokAccount] = useState("alhayya_gamis");
+  const [products, setProducts] = useState([]);
 
   const excelRef = useRef();
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
-  const handlePhotoChange = (index, file) => {
-    if (!file) return;
-    const url = URL.createObjectURL(file);
-    const updated = [...products];
-    updated[index].photo = url;
-    setProducts(updated);
+  // ===============================
+  // FETCH PRODUCTS
+  // ===============================
+  const fetchProducts = useCallback(async () => {
+    if (!user?.token || !tiktokAccount) return;
+
+    const url = `${backendUrl}/live-products?tiktok_account=${tiktokAccount}`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${user.token}`,
+        "ngrok-skip-browser-warning": "true",
+      },
+    });
+
+    const data = await res.json();
+
+setProducts(
+  data.map(p => ({
+    id: p.id,                 // 🔥 PENTING
+    code: p.sku,
+    desc: `${p.name} – ${JSON.parse(p.highlight || "[]").join(", ")}`,
+    photo: `${backendUrl}/uploads/products/${p.id}.webp`,
+  }))
+);
+
+
+  }, [user?.token, tiktokAccount, backendUrl]);
+
+  useEffect(() => {
+    fetchProducts();
+  }, [fetchProducts]);
+
+  // ===============================
+  // UPLOAD EXCEL
+  // ===============================
+  const handleExcelUpload = async (file) => {
+    if (!file || !user?.token) return;
+
+    if (!tiktokAccount) {
+      alert("Akun TikTok wajib diisi");
+      return;
+    }
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("tiktok_account", tiktokAccount);
+
+    try {
+      const url = `${backendUrl}/live-products/upload-excel`;
+      const res = await fetch(url, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+          "ngrok-skip-browser-warning": "true",
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        alert(data.error || "Gagal upload Excel");
+        return;
+      }
+
+      alert(`Berhasil upload ${data.inserted} produk`);
+      fetchProducts();
+    } catch (err) {
+      console.error(err);
+      alert("Server error");
+    }
   };
 
+  // ===============================
+  // UPLOAD FOTO (KE BACKEND)
+  // ===============================
+  const handlePhotoUpload = async (index, file) => {
+    if (!file || !user?.token) return;
+
+    const product = products[index];
+    const formData = new FormData();
+    formData.append("photo", file);
+
+    try {
+      const res = await fetch(
+        `${backendUrl}/live-products/${product.id}/photo`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      if (!res.ok) {
+        alert("Gagal upload foto");
+        return;
+      }
+
+      // refresh image (force reload cache)
+      setProducts((prev) => {
+        const updated = [...prev];
+        updated[index].photoUrl =
+          `${backendUrl}/uploads/products/${product.id}.webp?ts=` +
+          Date.now();
+        return updated;
+      });
+    } catch (err) {
+      console.error(err);
+      alert("Upload error");
+    }
+  };
+
+  // ===============================
+  // UI
+  // ===============================
   return (
     <div className="min-h-screen bg-gray-100 p-4 flex justify-center">
       <div className="w-full max-w-md bg-white rounded-2xl shadow p-4">
-        <h2 className="text-lg font-semibold text-center mb-4">Live Product – Satustok</h2>
+        <h2 className="text-lg font-semibold text-center mb-4">
+          Live Product – Satustok
+        </h2>
+
+        {/* TikTok Account */}
+        <div className="mb-3">
+          <label className="text-xs text-gray-600 mb-1 block">
+            Akun TikTok (sedang live)
+          </label>
+          <input
+            type="text"
+            value={tiktokAccount}
+            onChange={(e) => setTiktokAccount(e.target.value)}
+            className="w-full border rounded-xl px-3 py-2 text-sm"
+          />
+        </div>
+
+        {tiktokAccount && (
+          <div className="text-xs text-green-600 text-center mb-3">
+            Live aktif untuk akun <b>{tiktokAccount}</b>
+          </div>
+        )}
 
         {/* Upload Excel */}
         <div className="mb-4">
@@ -36,7 +158,13 @@ export default function LiveProductSatustok() {
           >
             Upload Excel Produk
           </button>
-          <input ref={excelRef} type="file" accept=".xls,.xlsx" hidden />
+          <input
+            ref={excelRef}
+            type="file"
+            accept=".xls,.xlsx"
+            hidden
+            onChange={(e) => handleExcelUpload(e.target.files[0])}
+          />
         </div>
 
         {/* Product List */}
@@ -47,26 +175,38 @@ export default function LiveProductSatustok() {
               className="flex items-center gap-3 border rounded-xl p-3"
             >
               <label className="w-20 h-20 border-2 border-dashed rounded-xl flex items-center justify-center text-xs text-gray-500 cursor-pointer overflow-hidden">
-                {p.photo ? (
-                  <img src={p.photo} className="w-full h-full object-cover" />
-                ) : (
-                  "+ Foto"
-                )}
+                <img
+                  src={p.photoUrl}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  onError={(e) => (e.target.style.display = "none")}
+                />
+                {!p.photoUrl && "+ Foto"}
                 <input
                   type="file"
                   accept="image/*"
                   capture="environment"
                   hidden
-                  onChange={(e) => handlePhotoChange(i, e.target.files[0])}
+                  onChange={(e) =>
+                    handlePhotoUpload(i, e.target.files[0])
+                  }
                 />
               </label>
 
               <div className="flex-1">
-                <div className="font-semibold text-sm">Kode: {p.code}</div>
+                <div className="font-semibold text-sm">
+                  Kode: {p.code}
+                </div>
                 <div className="text-xs text-gray-600">{p.desc}</div>
               </div>
             </div>
           ))}
+
+          {!products.length && tiktokAccount && (
+            <div className="text-xs text-gray-400 text-center">
+              Belum ada produk untuk akun ini
+            </div>
+          )}
         </div>
       </div>
     </div>
