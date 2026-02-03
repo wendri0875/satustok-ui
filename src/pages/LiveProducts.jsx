@@ -7,6 +7,9 @@ export default function LiveProductSatustok() {
   const [tiktokAccount, setTiktokAccount] = useState("alhayya_gamis");
   const [products, setProducts] = useState([]);
 
+
+
+
   const excelRef = useRef();
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -31,7 +34,7 @@ setProducts(
     id: p.id,                 // 🔥 PENTING
     code: p.sku,
     desc: `${p.name} – ${JSON.parse(p.highlight || "[]").join(", ")}`,
-    photo: `${backendUrl}/uploads/products/${p.id}.webp`,
+    photoUrl: p.photo_url ? `${backendUrl}${p.photo_url}?ts=${Date.now()}` : ""
   }))
 );
 
@@ -86,6 +89,9 @@ setProducts(
   // ===============================
   // UPLOAD FOTO (KE BACKEND)
   // ===============================
+
+  const [uploadingIndex, setUploadingIndex] = useState(null);
+
   const handlePhotoUpload = async (index, file) => {
     if (!file || !user?.token) return;
 
@@ -94,6 +100,7 @@ setProducts(
     formData.append("photo", file);
 
     try {
+      setUploadingIndex(index); // 🔥 mulai loading
       const res = await fetch(
         `${backendUrl}/live-products/${product.id}/photo`,
         {
@@ -102,8 +109,10 @@ setProducts(
         }
       );
 
+       const data = await res.json();
+
       if (!res.ok) {
-        alert("Gagal upload foto");
+        alert(data.error || "Gagal upload foto");
         return;
       }
 
@@ -118,7 +127,10 @@ setProducts(
     } catch (err) {
       console.error(err);
       alert("Upload error");
-    }
+    } finally {
+    setUploadingIndex(null); // 🔥 stop loading
+  }
+
   };
 
   // ===============================
@@ -174,24 +186,63 @@ setProducts(
               key={p.code}
               className="flex items-center gap-3 border rounded-xl p-3"
             >
-              <label className="w-20 h-20 border-2 border-dashed rounded-xl flex items-center justify-center text-xs text-gray-500 cursor-pointer overflow-hidden">
+            <label
+              className="
+                relative
+                w-20
+                aspect-[9/16]
+                border-2
+                border-dashed
+                rounded-xl
+                flex
+                items-center
+                justify-center
+                text-xs
+                text-gray-500
+                cursor-pointer
+                overflow-hidden
+                bg-gray-50
+              "
+            >
+              {/* FOTO */}
+              {p.photoUrl?.trim()  && (
                 <img
-                  src={p.photoUrl}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  onError={(e) => (e.target.style.display = "none")}
-                />
-                {!p.photoUrl && "+ Foto"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  hidden
-                  onChange={(e) =>
-                    handlePhotoUpload(i, e.target.files[0])
-                  }
-                />
-              </label>
+                src={p.photoUrl}
+                alt=""
+                style={{
+                  position: "absolute",
+                  inset: 0,
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "contain",   // 🔥 TIDAK CROP
+                  backgroundColor: "#f3f3f3",
+                  opacity: uploadingIndex === i ? 0.4 : 1,
+                  transition: "opacity 0.2s",
+                  background: "linear-gradient(#fafafa, #eee)"
+                }}
+              />
+              )}
+
+              {/* PLACEHOLDER */}
+              {!p.photoUrl && uploadingIndex !== i && "+ Foto"}
+
+              {/* LOADING OVERLAY */}
+              {uploadingIndex === i && (
+                <div className="absolute inset-0 flex items-center justify-center bg-white/70">
+                  <div className="w-6 h-6 border-2 border-gray-400 border-t-black rounded-full animate-spin"></div>
+                </div>
+              )}
+
+              <input
+                type="file"
+                accept="image/*"
+                capture="environment"
+                hidden
+                onChange={(e) =>
+                  handlePhotoUpload(i, e.target.files[0])
+                }
+              />
+            </label>
 
               <div className="flex-1">
                 <div className="font-semibold text-sm">
