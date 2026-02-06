@@ -304,7 +304,7 @@ const uploadPhotoById = async (productId, file) => {
 
   const renderWA = (text = "") => {
   let html = text
-    .replace(/\*(.*?)\*/g, "<b>$1</b>")     // *bold*
+    .replace(/\*(.*?)\*/g, "<b>$1</b>")     // *bold*..
     .replace(/_(.*?)_/g, "<i>$1</i>")       // _italic_
     .replace(/~(.*?)~/g, "<s>$1</s>")       // ~strike~
     .replace(/\n/g, "<br/>");               // newline
