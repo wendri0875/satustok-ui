@@ -9,6 +9,7 @@ export default function LiveProductSatustok() {
   const [products, setProducts] = useState([]);
   const [editingId, setEditingId] = useState(null);
   const [editingHighlight, setEditingHighlight] = useState("");
+  const [editingEtalase, setEditingEtalase] = useState("");
   const [editingSku, setEditingSku] = useState("");
   const [editingName, setEditingName] = useState("");
 
@@ -40,11 +41,13 @@ export default function LiveProductSatustok() {
 setProducts(
   data.map(p => ({
     id: p.id,                 // 🔥 PENTING
+    etalase: p.etalase,
     code: p.sku,
     name: p.name,
     highlight: p.highlight || "",
     photoUrl: p.photo_url ? `${backendUrl}${p.photo_url}?ts=${Date.now()}` : "",
-    is_active: p.is_active !== 0
+    is_active: p.is_active !== 0,
+    live_status: p.live_status || null // 🔥 BARU
   }))
 );
 
@@ -66,6 +69,7 @@ setProducts(
         Authorization: `Bearer ${user.token}`,
       },
       body: JSON.stringify({
+       etalase: editingEtalase, 
        sku: editingSku,
       name: editingName,
       highlight: editingHighlight,
@@ -73,6 +77,7 @@ setProducts(
     });
 
   setEditingId(null);
+  setEditingSku(null);
   setEditingSku("");
   setEditingName("");
   setEditingHighlight("");
@@ -115,6 +120,7 @@ const saveNewProduct = async () => {
       },
       body: JSON.stringify({
         tiktok_account: tiktokAccount,
+        etalase: editingEtalase,
         sku: editingSku,
         name: editingName,
         highlight: editingHighlight,
@@ -133,6 +139,7 @@ const saveNewProduct = async () => {
 
     // 3️⃣ RESET
     setEditingId(null);
+    setEditingEtalase(null);
     setEditingSku("");
     setEditingName("");
     setEditingHighlight("");
@@ -301,6 +308,27 @@ const uploadPhotoById = async (productId, file) => {
 };
 
 
+const updateLiveStatus = async (id, nextStatus) => {
+  try {
+    await fetch(`${backendUrl}/live-products/${id}/status`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${user.token}`,
+      },
+      body: JSON.stringify({
+        live_status: nextStatus, // "used" | "held" | null
+      }),
+    });
+
+    fetchProducts();
+  } catch (err) {
+    console.error(err);
+    alert("Gagal update status live");
+  }
+};
+
+
 
   const renderWA = (text = "") => {
   let html = text
@@ -393,6 +421,12 @@ const uploadPhotoById = async (productId, file) => {
                   <div className="flex-1">
                     <input
                       className="w-full border rounded-lg px-2 py-1 text-xs mb-1"
+                      placeholder="Etalase"
+                      value={editingEtalase}
+                      onChange={(e) => setEditingEtalase(e.target.value)}
+                    />
+                    <input
+                      className="w-full border rounded-lg px-2 py-1 text-xs mb-1"
                       placeholder="SKU"
                       value={editingSku}
                       onChange={(e) => setEditingSku(e.target.value)}
@@ -474,179 +508,201 @@ const uploadPhotoById = async (productId, file) => {
               </div>
             )}
 
-            {products.map((p, i) => {
-            const isActive = Number(p.is_active) !== 0;
+              {products.map((p, i) => {
+                const isActive = Number(p.is_active) !== 0;
 
-            return(
-              
-              <div     key={p.code}      className="relative flex items-start gap-3 border rounded-xl p-3"      >
+                return (
+                  <div
+                    key={p.code}
+                    className="bg-white rounded-xl border p-3 flex flex-col gap-3 relative"
+                  >
+                    {/* ===== ATAS: FOTO + KONTEN ===== */}
+                    <div className="flex gap-3">
+                      {/* FOTO */}
+                      <PhotoPicker
+                        imageUrl={p.photoUrl}
+                        loading={uploadingIndex === i}
+                        onChange={(file) => handlePhotoUpload(i, file)}
+                      />
 
-                  
-                    {/* FOTO – kiri atas */}
-                    <PhotoPicker
-                      imageUrl={p.photoUrl}
-                      loading={uploadingIndex === i}
-                      onChange={(file) => handlePhotoUpload(i, file)}
-                    />
+                      {/* KONTEN KANAN */}
+                      <div className="flex-1 flex flex-col gap-2">
+                        {editingId === p.id ? (
+                          <>
+                             <input
+                              className="w-full border rounded-lg px-2 py-1 text-xs"
+                              placeholder="Etalase"
+                              value={editingEtalase}
+                              onChange={(e) => setEditingEtalase(e.target.value)}
+                            />
+                            <input
+                              className="w-full border rounded-lg px-2 py-1 text-xs"
+                              placeholder="SKU"
+                              value={editingSku}
+                              onChange={(e) => setEditingSku(e.target.value)}
+                            />
 
+                            <input
+                              className="w-full border rounded-lg px-2 py-1 text-xs"
+                              placeholder="Nama Produk"
+                              value={editingName}
+                              onChange={(e) => setEditingName(e.target.value)}
+                            />
 
-                    {/* KONTEN KANAN – ATAS BAWAH */}
-                    <div className="flex-1 flex flex-col gap-2">
-                      {editingId === p.id ? (
-                        <>
-                          {/* SKU */}
-                          <input
-                            className="w-full border rounded-lg px-2 py-1 text-xs"
-                            placeholder="SKU"
-                            value={editingSku}
-                            onChange={(e) => setEditingSku(e.target.value)}
-                          />
+                            <textarea
+                              className="w-full border rounded-xl p-2 text-xs"
+                              rows={6}
+                              value={editingHighlight}
+                              onChange={(e) => setEditingHighlight(e.target.value)}
+                            />
 
-                          {/* NAMA */}
-                          <input
-                            className="w-full border rounded-lg px-2 py-1 text-xs"
-                            placeholder="Nama Produk"
-                            value={editingName}
-                            onChange={(e) => setEditingName(e.target.value)}
-                          />
+                            <button
+                              onClick={() => saveProduct(p.id)}
+                              className="w-full bg-green-600 text-white py-1 rounded-xl text-xs"
+                            >
+                              Simpan
+                            </button>
 
-                          {/* HIGHLIGHT */}
-                          <textarea
-                            className="w-full border rounded-xl p-2 text-xs"
-                            rows={6}
-                            value={editingHighlight}
-                            onChange={(e) => setEditingHighlight(e.target.value)}
-                          />
-
-                          {/* TOMBOL – ATAS BAWAH */}
-                          <button
-                            onClick={() => saveProduct(p.id)}
-                            className="w-full bg-green-600 text-white py-1 rounded-xl text-xs"
-                          >
-                            Simpan
-                          </button>
-
-                          <button
-                            onClick={() => {
-                              setEditingId(null);
-                              setEditingHighlight("");
-                              setEditingSku("");
-                              setEditingName("");
-                            }}
-                            className="w-full bg-gray-300 text-gray-700 py-1 rounded-xl text-xs"
-                          >
-                            Batal
-                          </button>
-                        </>
-                      ) : (
-                                  <>
-                                  
-                                      {/* CONTENT (yang di-grey-kan) */}
-                                  <div className={`${!isActive ? "text-gray-400" : ""} flex-1`}>
-                                    {/* NAMA */}
-                                    <div className="text-sm font-semibold">
-                                      {p.code} — {p.name}
-                                    </div>
-                                    
-
-                                    {/* HIGHLIGHT */}
-                                    <div
-                                      className="text-xs bg-gray-50 p-2 rounded leading-relaxed"
-                                      dangerouslySetInnerHTML={renderWA(p.highlight)}
-                                    />
-                                    </div>
-
-                                    <div className="flex justify-end gap-2 mt-2">
-                                        {isActive && (
-                                          <>
-                                            <button className="text-xs border-2 border-gray-300 px-2 py-1 rounded-lg">
-                                              🧕🏻 Dipakai
-                                            </button>
-
-                                            <button className="text-xs border-2 border-gray-300 px-2 py-1 rounded-lg">
-                                              🙋‍♀️ Dipegang
-                                            </button>
-                                          </>
-                                        )}
-                                        
-                                    </div>
-                                  </>
-                            )}
-                      
-                    </div>
-                        
-                              <button
-                                  onClick={() =>
-                                    setOpenMenuId(openMenuId === p.id ? null : p.id)
-                                  }
-                                  className="absolute top-2 right-2
-                                      w-7 h-7
-                                      flex items-center justify-center
-                                      rounded-full
-                                      text-gray-500
-                                      hover:bg-gray-100
-                                      active:bg-gray-200"
-                                >
-                                  ⋯
-                                </button>
-                                {openMenuId === p.id && (
-                              <div className="absolute top-9 right-2 bg-white border rounded-lg shadow text-xs z-30 min-w-[160px]">
-                                {/* AKTIF / NONAKTIF */}
-                          
-                                    <button
-                                      onClick={() => {
-                                        toggleActive(p.id, isActive ? 1 : 0);
-                                        setOpenMenuId(null);
-                                      }}
-                                      className="block w-full text-left px-3 py-2 hover:bg-gray-100"
-                                    >
-                                      {isActive ? "🔴 Nonaktifkan" : "🟢 Aktifkan"}
-                                    </button>
-
-                                    {/* EDIT */}
-                                    <button
-                                      onClick={() => {
-                                        setEditingId(p.id);
-                                        setEditingSku(p.code);
-                                        setEditingName(p.name);
-                                        setEditingHighlight(p.highlight);
-                                        setOpenMenuId(null);
-                                      }}
-                                      className="block w-full text-left px-3 py-2 hover:bg-gray-100"
-                                    >
-                                      ✏️ Edit
-                                    </button>
-                                      <button
-                                        onClick={() => {
-                                          duplicateProduct(p.id);
-                                          setOpenMenuId(null);
-                                        }}
-                                        className="block w-full text-left px-3 py-2 hover:bg-gray-100"
-                                      >
-                                        📄 Duplikat
-                                      </button>
-                                    {/* HAPUS */}
-                                    <button
-                                      onClick={() => {
-                                        if (
-                                          window.confirm(`Hapus produk ${p.code}?`)
-                                        ) {
-                                          delProduct(p.id);
-                                        }
-                                        setOpenMenuId(null);
-                                      }}
-                                      className="block w-full text-left px-3 py-2 text-red-600 hover:bg-red-50"
-                                    >
-                                      🗑 Hapus
-                                    </button>
+                            <button
+                              onClick={() => {
+                                setEditingId(null);
+                                setEditingHighlight("");
+                                setEditingEtalase(null);
+                                setEditingSku("");
+                                setEditingName("");
+                              }}
+                              className="w-full bg-gray-300 text-gray-700 py-1 rounded-xl text-xs"
+                            >
+                              Batal
+                            </button>
+                          </>
+                        ) : (
+                          <div className={`${!isActive ? "text-gray-400" : ""}`}>
+                            <div className="text-sm font-semibold">
+                              {p.code} — {p.name}
                             </div>
-                            )}
-                            
-                         
 
-                </div>
-             )}
-            )}
+                            <div
+                              className="text-xs bg-gray-50 p-2 rounded leading-relaxed mt-1"
+                              dangerouslySetInnerHTML={renderWA(p.highlight)}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* ===== BAWAH: TOMBOL ===== */}
+                    {editingId !== p.id && (
+                      <div className="flex items-center justify-end gap-2 pt-2 border-t">
+
+                        {/* MENU ... */}
+                        <div className="relative">
+                          <button
+                            onClick={() =>
+                              setOpenMenuId(openMenuId === p.id ? null : p.id)
+                            }
+                            className="w-8 h-8 flex items-center justify-center rounded-full border text-gray-500"
+                          >
+                            ⋯
+                          </button>
+
+                          {openMenuId === p.id && (
+                            <div className="absolute bottom-full left-0 mb-2 bg-white border rounded-lg shadow text-xs z-30 min-w-[160px]">
+                              <button
+                                onClick={() => {
+                                  toggleActive(p.id, isActive ? 1 : 0);
+                                  setOpenMenuId(null);
+                                }}
+                                className="block w-full text-left px-3 py-2 hover:bg-gray-100"
+                              >
+                                {isActive ? "🔴 Nonaktifkan" : "🟢 Aktifkan"}
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setEditingId(p.id);
+                                  setEditingEtalase(p.etalase);
+                                  setEditingSku(p.code);
+                                  setEditingName(p.name);
+                                  setEditingHighlight(p.highlight);
+                                  setOpenMenuId(null);
+                                }}
+                                className="block w-full text-left px-3 py-2 hover:bg-gray-100"
+                              >
+                                ✏️ Edit
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  duplicateProduct(p.id);
+                                  setOpenMenuId(null);
+                                }}
+                                className="block w-full text-left px-3 py-2 hover:bg-gray-100"
+                              >
+                                📄 Duplikat
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  if (window.confirm(`Hapus produk ${p.code}?`)) {
+                                    delProduct(p.id);
+                                  }
+                                  setOpenMenuId(null);
+                                }}
+                                className="block w-full text-left px-3 py-2 text-red-600 hover:bg-red-50"
+                              >
+                                🗑 Hapus
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* STATUS */}
+                        {isActive && (
+                          <>
+                            <button
+                              onClick={() =>
+                                updateLiveStatus(
+                                  p.id,
+                                  p.live_status === "used" ? null : "used"
+                                )
+                              }
+                              className={`
+                                text-xs px-2 py-1 rounded-lg whitespace-nowrap border
+                                ${p.live_status === "used"
+                                  ? "bg-blue-600 text-white border-blue-600"
+                                  : "border-gray-300"
+                                }
+                              `}
+                            >
+                              🧕🏻 Dipakai
+                            </button>
+
+                            <button
+                              onClick={() =>
+                                updateLiveStatus(
+                                  p.id,
+                                  p.live_status === "held" ? null : "held"
+                                )
+                              }
+                              className={`
+                                text-xs px-2 py-1 rounded-lg whitespace-nowrap border
+                                ${p.live_status === "held"
+                                  ? "bg-orange-500 text-white border-orange-500"
+                                  : "border-gray-300"
+                                }
+                              `}
+                            >
+                              🙋‍♀️ Dipegang
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+
 
 
             {!products.length && tiktokAccount && (
