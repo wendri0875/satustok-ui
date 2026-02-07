@@ -58,6 +58,32 @@ setProducts(
     fetchProducts();
   }, [fetchProducts]);
 
+
+
+  //editing area
+
+  const textareaRef = useRef(null);
+const cardRef = useRef(null);
+
+useEffect(() => {
+  if (!editingId) return;
+
+  // auto scroll ke card
+  cardRef.current?.scrollIntoView({
+    behavior: "smooth",
+    block: "start",
+  });
+
+  // auto resize textarea
+  if (textareaRef.current) {
+    textareaRef.current.style.height = "auto";
+    textareaRef.current.style.height =
+      textareaRef.current.scrollHeight + "px";
+  }
+}, [editingId]);
+
+
+
 // ===============================
   // SAVE HIGHLIGHT (UPDATE)
   // ===============================
@@ -315,6 +341,7 @@ const updateLiveStatus = async (id, nextStatus) => {
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${user.token}`,
+         "ngrok-skip-browser-warning": "true",
       },
       body: JSON.stringify({
         live_status: nextStatus, // "used" | "held" | null
@@ -346,8 +373,9 @@ const updateLiveStatus = async (id, nextStatus) => {
   // UI
   // ===============================
   return (
-    <div className="min-h-screen bg-gray-100 p-4 flex justify-center">
-      <div className="w-full max-w-md bg-white rounded-2xl shadow p-4">
+      <div className="min-h-screen bg-gray-100 p-4">
+        <div className="w-full max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto bg-white rounded-2xl shadow p-4">
+
         <h2 className="text-lg font-semibold text-center mb-4">
           Live Product – Satustok
         </h2>
@@ -512,71 +540,87 @@ const updateLiveStatus = async (id, nextStatus) => {
                 const isActive = Number(p.is_active) !== 0;
 
                 return (
+
+           
+
                   <div
+                    ref={editingId === p.id ? cardRef : null}
                     key={p.code}
                     className="bg-white rounded-xl border p-3 flex flex-col gap-3 relative"
                   >
                     {/* ===== ATAS: FOTO + KONTEN ===== */}
                     <div className="flex gap-3">
+
                       {/* FOTO */}
+                      <div className="relative">
                       <PhotoPicker
                         imageUrl={p.photoUrl}
                         loading={uploadingIndex === i}
                         onChange={(file) => handlePhotoUpload(i, file)}
                       />
 
+                      {p.etalase && (
+                          <div className="absolute top-1 left-1 bg-yellow-500 text-black font-semibold text-[10px] px-2 py-0.5 rounded-md z-10">
+                            {p.etalase}
+                          </div>
+                        )}
+
+                      </div>
                       {/* KONTEN KANAN */}
                       <div className="flex-1 flex flex-col gap-2">
-                        {editingId === p.id ? (
-                          <>
-                             <input
-                              className="w-full border rounded-lg px-2 py-1 text-xs"
-                              placeholder="Etalase"
-                              value={editingEtalase}
-                              onChange={(e) => setEditingEtalase(e.target.value)}
-                            />
-                            <input
-                              className="w-full border rounded-lg px-2 py-1 text-xs"
-                              placeholder="SKU"
-                              value={editingSku}
-                              onChange={(e) => setEditingSku(e.target.value)}
-                            />
+                        {editingId === p.id ? 
+                          (
+                              <>
+                                <input
+                                  className="w-full border rounded-lg px-2 py-1 text-xs"
+                                  placeholder="Etalase"
+                                  value={editingEtalase}
+                                  onChange={(e) => setEditingEtalase(e.target.value)}
+                                />
+                                <input
+                                  className="w-full border rounded-lg px-2 py-1 text-xs"
+                                  placeholder="SKU"
+                                  value={editingSku}
+                                  onChange={(e) => setEditingSku(e.target.value)}
+                                />
 
-                            <input
-                              className="w-full border rounded-lg px-2 py-1 text-xs"
-                              placeholder="Nama Produk"
-                              value={editingName}
-                              onChange={(e) => setEditingName(e.target.value)}
-                            />
+                                <input
+                                  className="w-full border rounded-lg px-2 py-1 text-xs"
+                                  placeholder="Nama Produk"
+                                  value={editingName}
+                                  onChange={(e) => setEditingName(e.target.value)}
+                                />
 
-                            <textarea
-                              className="w-full border rounded-xl p-2 text-xs"
-                              rows={6}
-                              value={editingHighlight}
-                              onChange={(e) => setEditingHighlight(e.target.value)}
-                            />
+                                <textarea
+                                  ref={textareaRef}
+                                  className="w-full border rounded-xl p-2 text-xs"
+                                  rows={6}
+                                  value={editingHighlight}
+                                  onChange={(e) => setEditingHighlight(e.target.value)}
+                                />
 
-                            <button
-                              onClick={() => saveProduct(p.id)}
-                              className="w-full bg-green-600 text-white py-1 rounded-xl text-xs"
-                            >
-                              Simpan
-                            </button>
+                                <button
+                                  onClick={() => saveProduct(p.id)}
+                                  className="w-full bg-green-600 text-white py-1 rounded-xl text-xs"
+                                >
+                                  Simpan
+                                </button>
 
-                            <button
-                              onClick={() => {
-                                setEditingId(null);
-                                setEditingHighlight("");
-                                setEditingEtalase(null);
-                                setEditingSku("");
-                                setEditingName("");
-                              }}
-                              className="w-full bg-gray-300 text-gray-700 py-1 rounded-xl text-xs"
-                            >
-                              Batal
-                            </button>
-                          </>
-                        ) : (
+                                <button
+                                  onClick={() => {
+                                    setEditingId(null);
+                                    setEditingHighlight("");
+                                    setEditingEtalase(null);
+                                    setEditingSku("");
+                                    setEditingName("");
+                                  }}
+                                  className="w-full bg-gray-300 text-gray-700 py-1 rounded-xl text-xs"
+                                >
+                                  Batal
+                                </button>
+                              </>
+                           ) : (
+
                           <div className={`${!isActive ? "text-gray-400" : ""}`}>
                             <div className="text-sm font-semibold">
                               {p.code} — {p.name}
@@ -587,7 +631,7 @@ const updateLiveStatus = async (id, nextStatus) => {
                               dangerouslySetInnerHTML={renderWA(p.highlight)}
                             />
                           </div>
-                        )}
+                              )}
                       </div>
                     </div>
 
@@ -620,20 +664,6 @@ const updateLiveStatus = async (id, nextStatus) => {
 
                               <button
                                 onClick={() => {
-                                  setEditingId(p.id);
-                                  setEditingEtalase(p.etalase);
-                                  setEditingSku(p.code);
-                                  setEditingName(p.name);
-                                  setEditingHighlight(p.highlight);
-                                  setOpenMenuId(null);
-                                }}
-                                className="block w-full text-left px-3 py-2 hover:bg-gray-100"
-                              >
-                                ✏️ Edit
-                              </button>
-
-                              <button
-                                onClick={() => {
                                   duplicateProduct(p.id);
                                   setOpenMenuId(null);
                                 }}
@@ -658,8 +688,24 @@ const updateLiveStatus = async (id, nextStatus) => {
                         </div>
 
                         {/* STATUS */}
-                        {isActive && (
+                        {
+                        isActive && (
                           <>
+                            <button
+                              onClick={() => {
+                                  setEditingId(p.id);
+                                  setEditingEtalase(p.etalase);
+                                  setEditingSku(p.code);
+                                  setEditingName(p.name);
+                                  setEditingHighlight(p.highlight);
+                                  setOpenMenuId(null);
+                                }}
+                              className={`
+                                text-xs px-2 py-1 rounded-lg whitespace-nowrap border
+                              `}
+                            >
+                              ✏️ Edit
+                            </button>
                             <button
                               onClick={() =>
                                 updateLiveStatus(
