@@ -16,6 +16,10 @@ export default function ChatContainer({ messages }) {
         <ChatMessage key={msg.id} message={msg} />
       ))}
       <div ref={bottomRef} />
+
+      
     </div>
+
+    
   );
 }

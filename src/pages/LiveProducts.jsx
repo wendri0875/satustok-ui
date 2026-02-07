@@ -373,8 +373,8 @@ const updateLiveStatus = async (id, nextStatus) => {
   // UI
   // ===============================
   return (
-      <div className="min-h-screen bg-gray-100 p-4">
-        <div className="w-full max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto bg-white rounded-2xl shadow p-4">
+      <div className="min-h-screen bg-gray-100 p-1">
+        <div className="w-full max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto bg-white rounded-2xl shadow p-1">
 
         <h2 className="text-lg font-semibold text-center mb-4">
           Live Product – Satustok

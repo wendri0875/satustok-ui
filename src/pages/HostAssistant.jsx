@@ -49,8 +49,8 @@ export default function HostAssistant() {
           setStatus(data.status);
 
           if (data.status === "offline") {
-            setMessages([]);
-            setUsername("");
+         //   setMessages([]);
+          //  setUsername("");
           }
           break;
 
@@ -58,6 +58,11 @@ export default function HostAssistant() {
          * KOMENTAR LIVE
          * ===================== */
         case "live_comment":
+          
+          if (data.status === "offline") {
+            setStatus(data.status);
+          }
+
           setMessages((prev) => [
             ...prev,
             {
@@ -153,8 +158,8 @@ export default function HostAssistant() {
       console.error(err);
     }
 
-    setMessages([]);
-    setUsername("");
+    //setMessages([]);
+    //setUsername("");
     setStatus("offline");
   }
 
