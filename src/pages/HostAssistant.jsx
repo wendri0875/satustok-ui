@@ -12,7 +12,7 @@ export default function HostAssistant() {
   const { user } = useAuth();
 
   const [status, setStatus] = useState("offline"); // online | connecting | offline
-  const [username, setUsername] = useState("alhayya_gamis");
+  const [hostId, setHostId] = useState("alhayya_gamis");
   const [messages, setMessages] = useState([]);
 
   const wsRef = useRef(null);
@@ -66,11 +66,15 @@ export default function HostAssistant() {
           setMessages((prev) => [
             ...prev,
             {
-              id: data.commentId,
-              user: data.nickname,
-              text: data.comment,
-              assisted: false,
-              answers: []
+                id: data.commentId,
+                userId: data.userId,
+                nickname: data.nickname,
+                text: data.comment,
+                assisted: false,
+                lastproductId: data.lastproductId,
+                lastphotoUrl: data.lastphotoUrl,
+                lastSku: data.lastSku,
+                answers: []
             }
           ]);
           break;
@@ -109,8 +113,12 @@ export default function HostAssistant() {
       console.error("WS ERROR:", err);
     };
 
-    ws.onclose = () => {
-      console.log("WS CLOSED");
+    ws.onclose = (event) => {
+        console.log("WS CLOSED");
+        console.log("WS CLOSED:");
+        console.log("code:", event.code);
+        console.log("reason:", event.reason);
+        console.log("wasClean:", event.wasClean);
     };
 
     return () => ws.close();
@@ -120,8 +128,8 @@ export default function HostAssistant() {
    * START LIVE ASSISTANT
    * =============================== */
   async function startAssistant() {
-    if (!username) {
-      alert("Username TikTok wajib diisi");
+    if (!hostId) {
+      alert("Akun TikTok wajib diisi");
       return;
     }
 
@@ -134,7 +142,7 @@ export default function HostAssistant() {
           "Content-Type": "application/json",
           Authorization: `Bearer ${user.token}`
         },
-        body: JSON.stringify({ username })
+        body: JSON.stringify({ hostId })
       });
     } catch (err) {
       console.error(err);
@@ -163,6 +171,83 @@ export default function HostAssistant() {
     setStatus("offline");
   }
 
+
+  const fetchProducts = async () => {
+
+  if (!user?.token || !hostId) return [];
+  //const url = `${backendUrl}/live-products?tiktok_account=${username}`;
+  const url = `${backendUrl}/live-products?tiktok_account=alhayya_gamis`;
+  const res = await fetch(url, {
+    headers: {
+      Authorization: `Bearer ${user.token}`,
+      "ngrok-skip-browser-warning": "true",
+    },
+  });
+
+  const data = await res.json();
+
+  console.log(data);
+
+  return data.map(p => ({
+    id: p.id,
+    etalase: p.etalase,
+    sku: p.sku,
+    name: p.name,
+    highlight: p.highlight || "",
+    photoUrl: p.photo_url ||"",
+    updated_at:p.updated_at ||"",
+    is_active: p.is_active !== 0,
+    live_status: p.live_status || null,
+  }));
+};
+
+
+const handleAssignProduct = async (message, product) => {
+  try {
+    console.log("Assigning product:", product.id);
+
+    // 1️⃣ Update UI langsung (optimistic update)
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === message.id
+          ? {
+              ...m,
+              lastproductId: product.id,
+              lastphotoUrl: product.photoUrl,
+              lastSku: product.sku,
+              lastUpdatedat:product.updated_at,
+              manualOverride: true // optional flag
+            }
+          : m
+      )
+    );
+
+    // 2️⃣ Kirim ke backend (AI context update)
+    await fetch(`${backendUrl}/ai/live/manual-assign`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${user.token}`,
+      },
+      body: JSON.stringify({
+        hostId: hostId,
+        userId: message.userId,
+        productId: product.id,
+        photoUrl: product.photoUrl,
+        updatedAt:product.updated_at,
+        sku: product.sku,
+        intent: message.intent || "manual_override",
+      }),
+    });
+
+  } catch (err) {
+    console.error("Assign gagal:", err);
+  }
+};
+
+
+
+
   /* ===============================
    * UI
    * =============================== */
@@ -176,9 +261,9 @@ export default function HostAssistant() {
           <input
             type="text"
             placeholder="Username TikTok (tanpa @)"
-            value={username}
+            value={hostId}
             disabled={status === "online" || status === "connecting"}
-            onChange={(e) => setUsername(e.target.value)}
+            onChange={(e) => setHostId(e.target.value)}
             style={{
               flex: 1,
               padding: "8px 10px",
@@ -241,7 +326,12 @@ export default function HostAssistant() {
       </div>
 
       {/* CHAT */}
-      <ChatContainer messages={messages} />
+      <ChatContainer
+        messages={messages}
+        fetchProducts={fetchProducts}
+        onSelectProduct={handleAssignProduct}
+      />
+
     </div>
   );
 }
