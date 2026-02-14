@@ -13,6 +13,8 @@ import HostAssistant from "./pages/HostAssistant";
 import LiveProducts from "./pages/LiveProducts";
 import StockHistory from "./pages/StockHistory";
 
+import { HostAssistantProvider } from "./context/HostAssistantContext";
+
 import "./index.css";
 
 function PrivateRoute({ children }) {
@@ -25,6 +27,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
     <BrowserRouter>
       <AuthProvider>
+        <HostAssistantProvider>
         <Routes>
           <Route path="/login" element={<Login />} />
 
@@ -192,6 +195,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           />
           <Route path="*" element={<div>404 Not Found</div>} />
         </Routes>
+        </HostAssistantProvider>
       </AuthProvider>
     </BrowserRouter>
   </React.StrictMode>

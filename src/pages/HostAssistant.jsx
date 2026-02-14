@@ -1,9 +1,10 @@
 // HostAssistant.jsx
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import ChatHeader from "../components/ChatHeader";
 import ChatContainer from "../components/ChatContainer";
+import { useHostAssistant } from "../context/HostAssistantContext";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 const wsUrl = import.meta.env.VITE_WS_URL;
@@ -11,11 +12,16 @@ const wsUrl = import.meta.env.VITE_WS_URL;
 export default function HostAssistant() {
   const { user } = useAuth();
 
-  const [status, setStatus] = useState("offline"); // online | connecting | offline
-  const [hostId, setHostId] = useState("alhayya_gamis");
-  const [messages, setMessages] = useState([]);
 
-  const wsRef = useRef(null);
+  const {
+  status,
+  setStatus,
+  hostId,
+  setHostId,
+  messages,
+  setMessages,
+  wsRef
+} = useHostAssistant();
 
   /* ===============================
    * WEBSOCKET
