@@ -1,10 +1,12 @@
 
 // \components\ChatMessage.jsx
 import { useState } from "react";
-
+import { useAuth } from "../auth/AuthProvider";
+import ProductThumbnail from "../components/ProductThumbnail"
 
  
 export default function ChatMessage({ message, fetchProducts, onSelectProduct  }) {
+  const { user } = useAuth();
 const [products, setProducts] = useState([]);
 const [showPicker, setShowPicker] = useState(false);
 const [loading, setLoading] = useState(false);
@@ -82,16 +84,11 @@ const handleOpenPicker = async () => {
                     </div>
 
                     {/* GAMBAR PRODUK */}
-                    <img
-                      src={message.lastphotoUrl? `${backendUrl}${message.lastphotoUrl}?v=${message.lastUpdatedat}`: ""}
-                      alt={message.lastSku || message.lastproductId}
-                      style={{
-                        width: 48,
-                        height: 48,
-                        borderRadius: 8,
-                        objectFit: "cover",
-                      }}
-                    />
+                         <ProductThumbnail
+                        src={`${backendUrl}${message.lastphotoUrl}`}
+                        token={user.token}
+                        version={message.lastUpdatedat}
+                      />
                   </div>
                 ) : (
                   "📦 Pilih Produk"
@@ -130,16 +127,12 @@ const handleOpenPicker = async () => {
                           alignItems: "center",
                         }}
                       >
-                        <img
-                          src={p.photoUrl? `${backendUrl}${p.photoUrl}?v=${p.updated_at}`: ""}
-                          alt={p.sku}
-                          style={{
-                            width: 48,
-                            height: 48,
-                            borderRadius: 8,
-                            objectFit: "cover",
-                          }}
-                        />
+                      <ProductThumbnail
+                        src={`${backendUrl}${p.photoUrl}`}
+                        token={user.token}
+                        version={p.updated_at}
+                      />
+
                         <span>{p.sku}</span>
                       </div>
                     ))}
