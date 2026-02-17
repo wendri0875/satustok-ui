@@ -69,18 +69,20 @@ export default function HostAssistant() {
             setStatus(data.status);
           }
 
-          setMessages((prev) => [
-            ...prev,
+         setMessages((prev) => [
+          ...prev,
             {
-                id: data.commentId,
-                userId: data.userId,
-                nickname: data.nickname,
-                text: data.comment,
-                assisted: false,
-                lastproductId: data.lastproductId,
-                lastphotoUrl: data.lastphotoUrl,
-                lastSku: data.lastSku,
-                answers: []
+              id: data.commentId,
+              hostId: hostId, // 🔥 penting untuk SOS
+              userId: data.userId,
+              nickname: data.nickname,
+              text: data.comment,
+              assisted: false,
+              lastproductId: data.lastproductId || null,
+              lastphotoUrl: data.lastphotoUrl || null,
+              lastSku: data.lastSku || null,
+              lastUpdatedat: data.lastUpdatedat || null,
+              answers: []
             }
           ]);
           break;
@@ -98,7 +100,7 @@ export default function HostAssistant() {
                     ...msg,
                     assisted: true,
                     answers: [
-                      ...msg.answers,
+                       ...(msg.answers || []),
                       {
                         text: data.data.text,
                         productCode: data.data.productCode
@@ -250,6 +252,9 @@ const handleAssignProduct = async (message, product) => {
     console.error("Assign gagal:", err);
   }
 };
+
+
+
 
 
 

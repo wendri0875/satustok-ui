@@ -1,6 +1,6 @@
 
 // \components\ChatMessage.jsx
-import { useState } from "react";
+import { useState,useEffect } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import ProductThumbnail from "../components/ProductThumbnail"
 
@@ -10,6 +10,12 @@ export default function ChatMessage({ message, fetchProducts, onSelectProduct  }
 const [products, setProducts] = useState([]);
 const [showPicker, setShowPicker] = useState(false);
 const [loading, setLoading] = useState(false);
+
+const [showSOS, setShowSOS] = useState(null); // index jawaban yg dibuka
+const [sosText, setSosText] = useState("");
+const [saving, setSaving] = useState(false);
+const [saveAsGeneral, setSaveAsGeneral] = useState(false);
+const [intent, setIntent] = useState("");
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -24,6 +30,47 @@ const handleOpenPicker = async () => {
 
   setShowPicker(!showPicker);
 };
+
+const handleSaveSOS = async (type) => {
+  if (!sosText.trim()) return;
+
+  try {
+    setSaving(true);
+
+    await fetch(`${backendUrl}/ai/sos`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${user.token}`,
+        "ngrok-skip-browser-warning": "true"
+      },
+      body: JSON.stringify({
+        hostId: message.hostId,
+        productId: message.lastproductId,
+        question: message.text,
+        answer: sosText,
+        intent, // 🔥 tambahan ini
+        type
+      })
+    });
+
+    setShowSOS(null);
+    setSosText("");
+  } catch (err) {
+    console.error("SOS ERROR", err);
+  } finally {
+    setSaving(false);
+  }
+};
+
+  // ✅ LETAKKAN DI SINI
+  const hasProduct = !!message.lastproductId;
+
+  useEffect(() => {
+    if (!hasProduct) {
+      setSaveAsGeneral(true);
+    }
+  }, [hasProduct]);
 
    
   return (
@@ -91,7 +138,7 @@ const handleOpenPicker = async () => {
                       />
                   </div>
                 ) : (
-                  "📦 Pilih Produk"
+                  "📦"
                 )}
               </button>
 
@@ -146,6 +193,125 @@ const handleOpenPicker = async () => {
       <div className="chat-text">
         {message.text}
       </div>
+
+      {/* TOMBOL SOS SELALU MUNCUL */}
+      <div style={{ marginTop: 6 }}>
+        <button
+          onClick={() => {
+            setShowSOS("question");
+            setSosText("");
+          }}
+          style={{
+            fontSize: 11,
+            padding: "3px 8px",
+            borderRadius: 6,
+            border: "1px solid #ff4d4f",
+            background: "#fff",
+            color: "#ff4d4f",
+            cursor: "pointer"
+          }}
+        >
+          🆘
+        </button>
+      </div>
+
+      {showSOS === "question" && (
+        <div
+          style={{
+            marginTop: 8,
+            padding: 10,
+            border: "1px solid #ddd",
+            borderRadius: 8,
+            background: "#fafafa"
+          }}
+        >
+            {/* INPUT TOPIK */}
+            <div style={{ marginBottom: 8 }}>
+              <label style={{ fontSize: 12, marginBottom: 4, display: "block" }}>
+                🏷️ Topik
+              </label>
+
+              <input
+                type="text"
+                value={intent}
+                onChange={(e) => setIntent(e.target.value)}
+                placeholder="Contoh: ukuran, ongkir, bahan, warna..."
+                style={{
+                  width: "100%",
+                  padding: "6px 8px",
+                  borderRadius: 6,
+                  border: "1px solid #d9d9d9"
+                }}
+              />
+            </div>
+          <textarea
+            value={sosText}
+            onChange={(e) => setSosText(e.target.value)}
+            rows={4}
+            placeholder="Tulis jawaban terbaik versi host..."
+            style={{ width: "100%", padding: "6px 8px", marginBottom: 8, border: "1px solid #d9d9d9" }}
+          />
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+            
+            {/* CHECKBOX */}
+            <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
+              <input
+                type="checkbox"
+                disabled={!hasProduct} // 🔥 disable kalau tidak ada produk
+                checked={saveAsGeneral}
+                onChange={(e) => setSaveAsGeneral(e.target.checked)}
+              />
+              Jadikan jawaban umum (tidak spesifik produk)
+            </label>
+            {!hasProduct && (
+              <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>
+                Tidak ada produk terpilih → otomatis disimpan sebagai jawaban umum
+              </div>
+            )}
+
+            {/* BUTTON ROW */}
+            <div style={{ display: "flex", gap: 8 }}>
+              <button
+                onClick={() =>
+                  handleSaveSOS( hasProduct
+                      ? saveAsGeneral
+                        ? "general"
+                        : "product"
+                      : "general")
+                }
+                disabled={saving}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 6,
+                  border: "1px solid #d9d9d9",
+                  background: "#fff",
+                  cursor: "pointer"
+                }}
+              >
+                💾 Simpan
+              </button>
+
+              <button
+                onClick={() => setShowSOS(null)}
+                style={{
+                  padding: "6px 12px",
+                  borderRadius: 6,
+                  border: "1px solid #d9d9d9",
+                  background: "#fff",
+                  cursor: "pointer"
+                }}
+              >
+                ❌ Batal
+              </button>
+            </div>
+          </div>
+
+
+        </div>
+      )}
+
+
 
       {/* JAWABAN ASSISTANT */}
       {Array.isArray(message.answers) &&
