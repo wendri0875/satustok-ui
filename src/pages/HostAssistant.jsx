@@ -1,16 +1,24 @@
 // HostAssistant.jsx
 
-import { useEffect } from "react";
+import { useEffect,useState  } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import ChatHeader from "../components/ChatHeader";
 import ChatContainer from "../components/ChatContainer";
 import { useHostAssistant } from "../context/HostAssistantContext";
+import HostHighlight from "../components/HostHighlight";
+
+
+
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 const wsUrl = import.meta.env.VITE_WS_URL;
 
+
+
 export default function HostAssistant() {
   const { user } = useAuth();
+
+
 
 
   const {
@@ -256,6 +264,90 @@ const handleAssignProduct = async (message, product) => {
 
 
 
+const handleAddAnswer = async (message, answerText) => {
+  try {
+    console.log("Adding SOS answer to message:", message.id);
+
+    // 1️⃣ Optimistic UI update
+    setMessages((prev) =>
+      prev.map((m) =>
+        m.id === message.id
+          ? {
+              ...m,
+              answers: [
+                ...(Array.isArray(m.answers) ? m.answers : []),
+                {
+                  text: answerText,
+                  fromSOS: true,
+                  createdAt: new Date().toISOString(),
+                },
+              ],
+              assisted: true, // optional: langsung tandai assisted
+            }
+          : m
+      )
+    );
+
+  } catch (err) {
+    console.error("Add answer gagal:", err);
+  }
+};
+
+
+const [showHighlight, setShowHighlight] = useState(false);
+const [highlightText, setHighlightText] = useState("");
+
+
+const fetchHighlight = async () => {
+  if (!hostId) return;
+
+  try {
+    const res = await fetch(
+      `${backendUrl}/host/live-highlight?host_id=${hostId}`,
+      {
+        headers: {
+          Authorization: `Bearer ${user.token}`,
+          "ngrok-skip-browser-warning": "true",
+        },
+      }
+    );
+
+    const data = await res.json();
+    setHighlightText(data?.highlight || "");
+  } catch (err) {
+    console.error("Fetch highlight gagal:", err);
+  }
+};
+
+const saveHighlight = async () => {
+  if (!hostId) return false;
+
+  try {
+    const res = await fetch(`${backendUrl}/host/live-highlight`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${user.token}`,
+        "ngrok-skip-browser-warning": "true",
+      },
+      body: JSON.stringify({
+        host_id: hostId,
+        highlight: highlightText,
+      }),
+    });
+
+    if (!res.ok) {
+      throw new Error("Save gagal");
+    }
+
+    return true;
+  } catch (err) {
+    console.error("Save highlight gagal:", err);
+    return false;
+  }
+};
+
+
 
 
 
@@ -268,50 +360,90 @@ const handleAssignProduct = async (message, product) => {
 
       {/* CONTROL BAR */}
       <div style={{ padding: "12px", background: "#fff", borderBottom: "1px solid #ddd" }}>
-        <div style={{ display: "flex", gap: "8px" }}>
-          <input
-            type="text"
-            placeholder="Username TikTok (tanpa @)"
-            value={hostId}
-            disabled={status === "online" || status === "connecting"}
-            onChange={(e) => setHostId(e.target.value)}
-            style={{
-              flex: 1,
-              padding: "8px 10px",
-              borderRadius: "6px",
-              border: "1px solid #ccc"
-            }}
-          />
+        <div style={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <div style={{ display: "flex", gap: "8px" }}>
+                <input
+                  type="text"
+                  placeholder="Username TikTok (tanpa @)"
+                  value={hostId}
+                  disabled={status === "online" || status === "connecting"}
+                  onChange={(e) => setHostId(e.target.value)}
+                  style={{
+                    flex: 1,
+                    padding: "8px 10px",
+                    borderRadius: "6px",
+                    border: "1px solid #ccc"
+                  }}
+                />         
 
-          {status === "offline" ? (
-            <button
-              onClick={startAssistant}
-              style={{
-                background: "#f44336",
-                color: "#fff",
-                border: "none",
-                padding: "8px 14px",
-                borderRadius: "6px",
-                cursor: "pointer"
-              }}
-            >
-              MULAI
-            </button>
-          ) : (
-            <button
-              onClick={stopAssistant}
-              style={{
-                background: "#333",
-                color: "#fff",
-                border: "none",
-                padding: "8px 14px",
-                borderRadius: "6px",
-                cursor: "pointer"
-              }}
-            >
-              STOP
-            </button>
-          )}
+                {status === "offline" ? (
+                  <button
+                    onClick={startAssistant}
+                    style={{
+                      background: "#f44336",
+                      color: "#fff",
+                      border: "none",
+                      padding: "8px 14px",
+                      borderRadius: "6px",
+                      cursor: "pointer"
+                    }}
+                  >
+                    MULAI
+                  </button>
+                ) : (
+                  <button
+                    onClick={stopAssistant}
+                    style={{
+                      background: "#333",
+                      color: "#fff",
+                      border: "none",
+                      padding: "8px 14px",
+                      borderRadius: "6px",
+                      cursor: "pointer"
+                    }}
+                  >
+                    STOP
+                  </button>
+                )}
+
+                <button
+                  onClick={() => {
+                    if (!hostId) {
+                      alert("Isi dulu Username TikTok");
+                      return;
+                    }
+
+                    setShowHighlight((prev) => !prev);
+
+                    if (!showHighlight) {
+                      fetchHighlight(); // load saat dibuka
+                    }
+                  }}
+                  style={{
+                    background: "#1976d2",
+                    color: "#fff",
+                    border: "none",
+                    padding: "8px 14px",
+                    borderRadius: "6px",
+                    cursor: "pointer"
+                  }}
+                >
+                  📘 Highlight
+                </button>
+          </div>
+
+            {showHighlight && (
+                <HostHighlight
+                  highlightText={highlightText}
+                  setHighlightText={setHighlightText}
+                  saveHighlight={saveHighlight}
+                  onClose={() => {
+                    setShowHighlight(false);
+                  }}
+                />
+              )}
+
+
         </div>
 
         {/* STATUS */}
@@ -341,6 +473,7 @@ const handleAssignProduct = async (message, product) => {
         messages={messages}
         fetchProducts={fetchProducts}
         onSelectProduct={handleAssignProduct}
+        onAddAnswer={handleAddAnswer }
       />
 
     </div>

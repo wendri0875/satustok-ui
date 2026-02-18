@@ -5,7 +5,7 @@ import { useAuth } from "../auth/AuthProvider";
 import ProductThumbnail from "../components/ProductThumbnail"
 
  
-export default function ChatMessage({ message, fetchProducts, onSelectProduct  }) {
+export default function ChatMessage({ message, fetchProducts, onSelectProduct , onAddAnswer  }) {
   const { user } = useAuth();
 const [products, setProducts] = useState([]);
 const [showPicker, setShowPicker] = useState(false);
@@ -37,7 +37,7 @@ const handleSaveSOS = async (type) => {
   try {
     setSaving(true);
 
-    await fetch(`${backendUrl}/ai/sos`, {
+       const res = await fetch(`${backendUrl}/ai/sos`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -53,6 +53,12 @@ const handleSaveSOS = async (type) => {
         type
       })
     });
+    
+    if (!res.ok) throw new Error("Gagal save");
+        
+    if (res.ok) {
+      onAddAnswer(message, sosText);
+    }
 
     setShowSOS(null);
     setSosText("");

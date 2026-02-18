@@ -15,7 +15,9 @@ import StockHistory from "./pages/StockHistory";
 
 import { HostAssistantProvider } from "./context/HostAssistantContext";
 
+
 import "./index.css";
+
 
 function PrivateRoute({ children }) {
     const { user } = useAuth();
@@ -83,6 +85,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
               </PrivateRoute>
             }
           />
+
           <Route
             path="/add-store"
             element={

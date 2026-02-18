@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import ChatMessage from "./ChatMessage";
 import "./chat.css";
 
-export default function ChatContainer({ messages, fetchProducts, onSelectProduct }) {
+export default function ChatContainer({ messages, fetchProducts, onSelectProduct, onAddAnswer }) {
   const bottomRef = useRef(null);
 
   useEffect(() => {
@@ -18,6 +18,7 @@ export default function ChatContainer({ messages, fetchProducts, onSelectProduct
           message={msg}
           fetchProducts={fetchProducts}
           onSelectProduct={onSelectProduct}
+          onAddAnswer={onAddAnswer}
         />
       ))}
       <div ref={bottomRef} />
