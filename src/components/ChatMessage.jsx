@@ -46,7 +46,7 @@ const handleSaveSOS = async (type) => {
       },
       body: JSON.stringify({
         hostId: message.hostId,
-        productId: message.lastproductId,
+        productId: message.lastProductId,
         question: message.text,
         answer: sosText,
         intent, // 🔥 tambahan ini
@@ -70,7 +70,7 @@ const handleSaveSOS = async (type) => {
 };
 
   // ✅ LETAKKAN DI SINI
-  const hasProduct = !!message.lastproductId;
+  const hasProduct = !!message.lastProductId;
 
   useEffect(() => {
     if (!hasProduct) {
@@ -115,7 +115,7 @@ const handleSaveSOS = async (type) => {
                   background: "#fff",
                 }}
               >
-                {message.lastproductId ? (
+                {message.lastProductId ? (
                   <div style={{ position: "relative", width: 48, height: 48 }}>
                     
                     {/* BADGE SKU */}
@@ -138,9 +138,9 @@ const handleSaveSOS = async (type) => {
 
                     {/* GAMBAR PRODUK */}
                          <ProductThumbnail
-                        src={`${backendUrl}${message.lastphotoUrl}`}
+                        src={`${backendUrl}${message.lastPhotoUrl}`}
                         token={user.token}
-                        version={message.lastUpdatedat}
+                        version={message.lastUpdatedAt}
                       />
                   </div>
                 ) : (

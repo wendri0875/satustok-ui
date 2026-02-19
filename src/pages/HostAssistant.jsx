@@ -86,10 +86,10 @@ export default function HostAssistant() {
               nickname: data.nickname,
               text: data.comment,
               assisted: false,
-              lastproductId: data.lastproductId || null,
-              lastphotoUrl: data.lastphotoUrl || null,
+              lastProductId: data.lastProductId || null,
+              lastPhotoUrl: data.lastPhotoUrl || null,
               lastSku: data.lastSku || null,
-              lastUpdatedat: data.lastUpdatedat || null,
+              lastUpdatedAt: data.lastUpdatedAt || null,
               answers: []
             }
           ]);
@@ -228,15 +228,17 @@ const handleAssignProduct = async (message, product) => {
         m.id === message.id
           ? {
               ...m,
-              lastproductId: product.id,
-              lastphotoUrl: product.photoUrl,
+              lastProductId: product.id,
+              lastPhotoUrl: product.photoUrl,
               lastSku: product.sku,
-              lastUpdatedat:product.updated_at,
+              lastUpdatedAt:product.updated_at,
               manualOverride: true // optional flag
             }
           : m
       )
     );
+
+    console.log("msg",message);
 
     // 2️⃣ Kirim ke backend (AI context update)
     await fetch(`${backendUrl}/ai/live/manual-assign`, {
