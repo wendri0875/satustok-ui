@@ -315,6 +315,8 @@ const fetchHighlight = async () => {
     );
 
     const data = await res.json();
+
+    console.log("highlight:",data );
     setHighlightText(data?.highlight || "");
   } catch (err) {
     console.error("Fetch highlight gagal:", err);
