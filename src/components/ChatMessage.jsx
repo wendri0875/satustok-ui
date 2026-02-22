@@ -1,212 +1,266 @@
-
-// \components\ChatMessage.jsx
-import { useState,useEffect } from "react";
+import { useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
-import ProductThumbnail from "../components/ProductThumbnail"
+import ProductThumbnail from "../components/ProductThumbnail";
+import SOSPanel from "../components/SOSPanel";
 
- 
-export default function ChatMessage({ message, fetchProducts, onSelectProduct , onAddAnswer  }) {
+export default function ChatMessage({
+  message,
+  fetchProducts,
+  onSelectProduct,
+  onAddAnswer
+}) {
   const { user } = useAuth();
-const [products, setProducts] = useState([]);
-const [showPicker, setShowPicker] = useState(false);
-const [loading, setLoading] = useState(false);
 
-const [showSOS, setShowSOS] = useState(null); // index jawaban yg dibuka
-const [sosText, setSosText] = useState("");
-const [saving, setSaving] = useState(false);
-const [saveAsGeneral, setSaveAsGeneral] = useState(false);
-const [intent, setIntent] = useState("");
+  const [products, setProducts] = useState([]);
+  const [showPicker, setShowPicker] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [showSOS, setShowSOS] = useState(false);
 
-const backendUrl = import.meta.env.VITE_BACKEND_URL;
+  const [showHighlight, setShowHighlight] = useState(false);
+  const [highlightData, setHighlightData] = useState(null);
+  const [loadingHighlight, setLoadingHighlight] = useState(false);
 
-
-const handleOpenPicker = async () => {
-  if (!showPicker) {
-    setLoading(true);
-    const data = await fetchProducts();
-    setProducts(data.filter(p => p.is_active)); // optional filter
-    setLoading(false);
-  }
-
-  setShowPicker(!showPicker);
-};
-
-const handleSaveSOS = async (type) => {
-  if (!sosText.trim()) return;
-
-  try {
-    setSaving(true);
-
-       const res = await fetch(`${backendUrl}/ai/sos`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${user.token}`,
-        "ngrok-skip-browser-warning": "true"
-      },
-      body: JSON.stringify({
-        hostId: message.hostId,
-        productId: message.lastProductId,
-        question: message.text,
-        answer: sosText,
-        intent, // 🔥 tambahan ini
-        type
-      })
-    });
-    
-    if (!res.ok) throw new Error("Gagal save");
-        
-    if (res.ok) {
-      onAddAnswer(message, sosText);
-    }
-
-    setShowSOS(null);
-    setSosText("");
-  } catch (err) {
-    console.error("SOS ERROR", err);
-  } finally {
-    setSaving(false);
-  }
-};
-
-  // ✅ LETAKKAN DI SINI
+  const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const hasProduct = !!message.lastProductId;
 
-  useEffect(() => {
-    if (!hasProduct) {
-      setSaveAsGeneral(true);
+  /* =========================
+     FETCH PRODUCT LIST
+  ========================= */
+  const handleOpenPicker = async () => {
+    if (!showPicker) {
+      setLoading(true);
+      const data = await fetchProducts();
+      setProducts(data.filter((p) => p.is_active));
+      setLoading(false);
     }
-  }, [hasProduct]);
+    setShowPicker(!showPicker);
+  };
 
-   
+  /* =========================
+     FETCH PRODUCT DETAIL (SELECT *)
+     GET /live-products/:id
+  ========================= */
+  const fetchProductDetail = async (productId) => {
+    try {
+      setLoadingHighlight(true);
+
+      const res = await fetch(
+        `${backendUrl}/live-products/${productId}`,
+        {
+          headers: {
+            Authorization: `Bearer ${user.token}`
+          }
+        }
+      );
+
+      if (!res.ok) {
+        throw new Error("Gagal mengambil produk");
+      }
+
+      const data = await res.json();
+      setHighlightData(data.highlight || "");
+    } catch (err) {
+      console.error("Fetch highlight error:", err);
+      setHighlightData("Gagal mengambil highlight");
+    } finally {
+      setLoadingHighlight(false);
+    }
+  };
+
+  /* =========================
+     HANDLE INTIP
+  ========================= */
+  const handleToggleHighlight = async () => {
+    if (!showHighlight && message.lastProductId) {
+      await fetchProductDetail(message.lastProductId);
+    }
+    setShowHighlight((prev) => !prev);
+  };
+
   return (
     <div className="chat-message">
-      {/* HEADER KOMENTAR */}
+      {/* HEADER */}
       <div
         className="chat-user-row"
         style={{
           display: "flex",
           alignItems: "center",
           justifyContent: "space-between",
-          gap: 8,
+          gap: 8
         }}
       >
         <div>
           <span className="chat-user">{message.nickname}</span>
-
           {message.assisted && (
-            <span className="chat-assisted-badge">
-              ✓ di-assist
-            </span>
+            <span className="chat-assisted-badge">✓ di-assist</span>
           )}
         </div>
 
-       {/* TOMBOL PILIH PRODUK */}
-            <div style={{ position: "relative" }}>
-              <button
-                onClick={handleOpenPicker}
-                title="Pilih atau ganti produk"
-                style={{
-                  fontSize: 12,
-                  padding: 4,
-                  borderRadius: 8,
-                  border: "1px solid #ddd",
-                  cursor: "pointer",
-                  background: "#fff",
-                }}
-              >
-                {message.lastProductId ? (
-                  <div style={{ position: "relative", width: 48, height: 48 }}>
-                    
-                    {/* BADGE SKU */}
-                    <div
-                      style={{
-                        position: "absolute",
-                        top: -6,
-                        left: -6,
-                        background: "#000",
-                        color: "#fff",
-                        fontSize: 10,
-                        padding: "2px 6px",
-                        borderRadius: 6,
-                        zIndex: 2,
-                        whiteSpace: "nowrap",
-                      }}
-                    >
-                      {message.lastSku}
-                    </div>
-
-                    {/* GAMBAR PRODUK */}
-                         <ProductThumbnail
-                        src={`${backendUrl}${message.lastPhotoUrl}`}
-                        token={user.token}
-                        version={message.lastUpdatedAt}
-                      />
-                  </div>
-                ) : (
-                  "📦"
-                )}
-              </button>
-
-              {showPicker && (
+        {/* PRODUCT PICKER BLOCK */}
+        <div
+          style={{
+            position: "relative",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            gap: 4
+          }}
+        >
+          {/* BUTTON PICKER */}
+          <button
+            onClick={handleOpenPicker}
+            style={{
+              fontSize: 12,
+              padding: 4,
+              borderRadius: 8,
+              border: "1px solid #ddd",
+              background: "#fff",
+              cursor: "pointer"
+            }}
+          >
+            {hasProduct ? (
+              <div style={{ position: "relative", width: 48, height: 48 }}>
                 <div
                   style={{
                     position: "absolute",
-                    right: 0,
-                    top: 60,
-                    width: 220,
-                    backgroundColor: "#fff",
-                    border: "1px solid #ddd",
-                    borderRadius: 8,
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                    zIndex: 9999,
+                    top: -6,
+                    left: -6,
+                    background: "#000",
+                    color: "#fff",
+                    fontSize: 10,
+                    padding: "2px 6px",
+                    borderRadius: 6,
+                    zIndex: 2
                   }}
                 >
-                  {loading && <div style={{ padding: 10 }}>Loading...</div>}
+                  {message.lastSku}
+                </div>
 
-                  {!loading &&
-                    products.map((p) => (
-                      <div
-                        key={p.id}
-                        onClick={() => {
-                          onSelectProduct(message, p);
-                          setShowPicker(false);
-                        }}
-                        style={{
-                          display: "flex",
-                          gap: 8,
-                          padding: 8,
-                          cursor: "pointer",
-                          alignItems: "center",
-                        }}
-                      >
-                      <ProductThumbnail
-                        src={`${backendUrl}${p.photoUrl}`}
-                        token={user.token}
-                        version={p.updated_at}
-                      />
+                <ProductThumbnail
+                  src={`${backendUrl}${message.lastPhotoUrl}`}
+                  token={user.token}
+                  version={message.lastUpdatedAt}
+                />
+              </div>
+            ) : (
+              "📦"
+            )}
+          </button>
 
-                        <span>{p.sku}</span>
-                      </div>
-                    ))}
+          {/* INTIP BUTTON */}
+          {hasProduct && (
+            <button
+              onClick={handleToggleHighlight}
+              style={{
+                fontSize: 10,
+                padding: "2px 6px",
+                borderRadius: 6,
+                border: "1px solid #1677ff",
+                background: "#fff",
+                color: "#1677ff",
+                cursor: "pointer"
+              }}
+            >
+              👀 {showHighlight ? "Tutup" : "Intip"}
+            </button>
+          )}
+
+          {/* HIGHLIGHT BOX */}
+          {showHighlight && (
+            <div
+              style={{
+                position: "absolute",
+                top: 100,
+                right: 0,
+                width: 260,
+                background: "#fff",
+                border: "1px solid #ddd",
+                borderRadius: 8,
+                padding: 10,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                zIndex: 9999
+              }}
+            >
+              <div
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  marginBottom: 6
+                }}
+              >
+                ✨ Highlight Produk
+              </div>
+
+              {loadingHighlight ? (
+                <div style={{ fontSize: 13 }}>Loading...</div>
+              ) : (
+                <div
+                  style={{
+                    fontSize: 13,
+                    whiteSpace: "pre-wrap"
+                  }}
+                >
+                  {highlightData || "Tidak ada highlight"}
                 </div>
               )}
             </div>
+          )}
 
+          {/* PRODUCT PICKER DROPDOWN */}
+          {showPicker && (
+            <div
+              style={{
+                position: "absolute",
+                right: 0,
+                top: 60,
+                width: 220,
+                background: "#fff",
+                border: "1px solid #ddd",
+                borderRadius: 8,
+                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                zIndex: 9999
+              }}
+            >
+              {loading && <div style={{ padding: 10 }}>Loading...</div>}
+
+              {!loading &&
+                products.map((p) => (
+                  <div
+                    key={p.id}
+                    onClick={() => {
+                      onSelectProduct(message, p);
+                      setShowPicker(false);
+                      setShowHighlight(false);
+                      setHighlightData(null);
+                    }}
+                    style={{
+                      display: "flex",
+                      gap: 8,
+                      padding: 8,
+                      cursor: "pointer",
+                      alignItems: "center"
+                    }}
+                  >
+                    <ProductThumbnail
+                      src={`${backendUrl}${p.photoUrl}`}
+                      token={user.token}
+                      version={p.updated_at}
+                    />
+                    <span>{p.sku}</span>
+                  </div>
+                ))}
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ISI KOMENTAR */}
-      <div className="chat-text">
-        {message.text}
-      </div>
+      {/* TEXT */}
+      <div className="chat-text">{message.text}</div>
 
-      {/* TOMBOL SOS SELALU MUNCUL */}
+      {/* SOS BUTTON */}
       <div style={{ marginTop: 6 }}>
         <button
-          onClick={() => {
-            setShowSOS("question");
-            setSosText("");
-          }}
+          onClick={() => setShowSOS(true)}
           style={{
             fontSize: 11,
             padding: "3px 8px",
@@ -221,105 +275,18 @@ const handleSaveSOS = async (type) => {
         </button>
       </div>
 
-      {showSOS === "question" && (
-        <div
-          style={{
-            marginTop: 8,
-            padding: 10,
-            border: "1px solid #ddd",
-            borderRadius: 8,
-            background: "#fafafa"
-          }}
-        >
-            {/* INPUT TOPIK */}
-            <div style={{ marginBottom: 8 }}>
-              <label style={{ fontSize: 12, marginBottom: 4, display: "block" }}>
-                🏷️ Topik
-              </label>
-
-              <input
-                type="text"
-                value={intent}
-                onChange={(e) => setIntent(e.target.value)}
-                placeholder="Contoh: ukuran, ongkir, bahan, warna..."
-                style={{
-                  width: "100%",
-                  padding: "6px 8px",
-                  borderRadius: 6,
-                  border: "1px solid #d9d9d9"
-                }}
-              />
-            </div>
-          <textarea
-            value={sosText}
-            onChange={(e) => setSosText(e.target.value)}
-            rows={4}
-            placeholder="Tulis jawaban terbaik versi host..."
-            style={{ width: "100%", padding: "6px 8px", marginBottom: 8, border: "1px solid #d9d9d9" }}
-          />
-
-          <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-            
-            {/* CHECKBOX */}
-            <label style={{ fontSize: 13, display: "flex", alignItems: "center", gap: 6 }}>
-              <input
-                type="checkbox"
-                disabled={!hasProduct} // 🔥 disable kalau tidak ada produk
-                checked={saveAsGeneral}
-                onChange={(e) => setSaveAsGeneral(e.target.checked)}
-              />
-              Jadikan jawaban umum (tidak spesifik produk)
-            </label>
-            {!hasProduct && (
-              <div style={{ fontSize: 11, color: "#888", marginTop: 4 }}>
-                Tidak ada produk terpilih → otomatis disimpan sebagai jawaban umum
-              </div>
-            )}
-
-            {/* BUTTON ROW */}
-            <div style={{ display: "flex", gap: 8 }}>
-              <button
-                onClick={() =>
-                  handleSaveSOS( hasProduct
-                      ? saveAsGeneral
-                        ? "general"
-                        : "product"
-                      : "general")
-                }
-                disabled={saving}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 6,
-                  border: "1px solid #d9d9d9",
-                  background: "#fff",
-                  cursor: "pointer"
-                }}
-              >
-                💾 Simpan
-              </button>
-
-              <button
-                onClick={() => setShowSOS(null)}
-                style={{
-                  padding: "6px 12px",
-                  borderRadius: 6,
-                  border: "1px solid #d9d9d9",
-                  background: "#fff",
-                  cursor: "pointer"
-                }}
-              >
-                ❌ Batal
-              </button>
-            </div>
-          </div>
-
-
-        </div>
+      {/* SOS PANEL */}
+      {showSOS && (
+        <SOSPanel
+          message={message}
+          backendUrl={backendUrl}
+          hasProduct={hasProduct}
+          onClose={() => setShowSOS(false)}
+          onSaved={(text) => onAddAnswer(message, text)}
+        />
       )}
 
-
-
-      {/* JAWABAN ASSISTANT */}
+      {/* ANSWERS */}
       {Array.isArray(message.answers) &&
         message.answers.map((ans, idx) => (
           <div key={idx} className="chat-assistant">
