@@ -1,48 +1,21 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 
 export default function ProductThumbnail({
   src,
-  token,
   version,
   size = 48,
 }) {
-  const [preview, setPreview] = useState(null);
+  const finalUrl = useMemo(() => {
+    if (!src) return null;
 
-  useEffect(() => {
-    let objectUrl;
+    return `${src}?tr=w-${size},h-${size},c-maintain_ratio,q-70&v=${version}`;
+  }, [src, size, version]);
 
-    const loadImage = async () => {
-      try {
-        const res = await fetch(`${src}?v=${version}`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "ngrok-skip-browser-warning": "true",
-          },
-        });
-
-        const blob = await res.blob();
-        objectUrl = URL.createObjectURL(blob);
-        setPreview(objectUrl);
-      } catch (err) {
-        console.error("Gagal load thumbnail:", err);
-        setPreview(null);
-      }
-    };
-
-    if (src && token) {
-      loadImage();
-    }
-
-    return () => {
-      if (objectUrl) URL.revokeObjectURL(objectUrl);
-    };
-  }, [src, token, version]);
-
-  if (!preview) return null;
+  if (!finalUrl) return null;
 
   return (
     <img
-      src={preview}
+      src={finalUrl}
       alt=""
       style={{
         width: size,

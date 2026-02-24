@@ -37,6 +37,7 @@ export default function LiveProductSatustok() {
     });
 
     const data = await res.json();
+    console.log("FETCH RESULT:", data);
 
 setProducts(
   data.map(p => ({
@@ -45,7 +46,7 @@ setProducts(
     code: p.sku,
     name: p.name,
     highlight: p.highlight || "",
-    photoUrl: p.photo_url ? `${backendUrl}${p.photo_url}?ts=${Date.now()}` : "",
+    photoUrl: p.photo_url ? `${p.photo_url}?ts=${Date.now()}` : "",
     is_active: p.is_active !== 0,
     live_status: p.live_status || null // 🔥 BARU
   }))
@@ -296,9 +297,7 @@ const uploadPhotoById = async (productId, file) => {
       // refresh image (force reload cache)
       setProducts((prev) => {
         const updated = [...prev];
-        updated[index].photoUrl =
-          `${backendUrl}/uploads/products/${product.id}.webp?ts=` +
-          Date.now();
+        updated[index].photoUrl = data.photo_url + "?ts=" + Date.now();
         return updated;
       });
     } catch (err) {

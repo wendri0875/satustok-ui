@@ -137,10 +137,11 @@ export default function ChatMessage({
                 </div>
 
                 <ProductThumbnail
-                  src={`${backendUrl}${message.lastPhotoUrl}`}
-                  token={user.token}
+                  src={message.lastPhotoUrl}
                   version={message.lastUpdatedAt}
                 />
+
+
               </div>
             ) : (
               "📦"
@@ -242,8 +243,7 @@ export default function ChatMessage({
                     }}
                   >
                     <ProductThumbnail
-                      src={`${backendUrl}${p.photoUrl}`}
-                      token={user.token}
+                      src={p.photoUrl}
                       version={p.updated_at}
                     />
                     <span>{p.sku}</span>
