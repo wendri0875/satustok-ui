@@ -4,7 +4,7 @@ import ChatMessage from "./ChatMessage";
 import "./chat.css";
 
 
-export default function ChatContainer({ messages, fetchProducts, onSelectProduct, onAddAnswer, style }) {
+export default function ChatContainer({ messages, fetchProducts, onSelectProduct, onAddAnswer }) {
   const containerRef = useRef(null);
   const bottomRef = useRef(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
