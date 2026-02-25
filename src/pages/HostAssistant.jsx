@@ -140,6 +140,7 @@ export default function HostAssistant() {
     const url = `${backendUrl}/live-products?tiktok_account=alhayya_gamis`;
     const res = await fetch(url, { headers: { Authorization: `Bearer ${user.token}`, "ngrok-skip-browser-warning":"true" } });
     const data = await res.json();
+    
     return data.map(p => ({
       id: p.id,
       etalase: p.etalase,
@@ -148,7 +149,7 @@ export default function HostAssistant() {
       highlight: p.highlight || "",
       photoUrl: p.photo_url || "",
       updated_at: p.updated_at || "",
-      is_active: p.is_active !== 0,
+      is_active: p.is_active,
       live_status: p.live_status || null,
     }));
   };

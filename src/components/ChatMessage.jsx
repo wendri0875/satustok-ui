@@ -32,7 +32,10 @@ export default function ChatMessage({
     if (!showPicker) {
       setLoading(true);
       const data = await fetchProducts();
-      setProducts(data.filter((p) => p.is_active));
+     // console.log("BEFORE FILTER:", data);
+      const activeOnly = data.filter(p => p.is_active);
+     // console.log("AFTER FILTER:", activeOnly);
+      setProducts(activeOnly);
       setLoading(false);
     }
     setShowPicker(!showPicker);
