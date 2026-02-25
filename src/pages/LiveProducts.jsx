@@ -240,28 +240,72 @@ const uploadPhotoById = async (productId, file) => {
   const toggleActive = async (id, currentActive) => {
 
     console.log("id:",id,"currentActive:",currentActive);
-  const nextActive =
-    currentActive === 0 ? 1 : 0; // null dianggap aktif
+    const nextActive =
+      currentActive === 0 ? 1 : 0; // null dianggap aktif
 
-  try {
-    await fetch(`${backendUrl}/live-products/${id}/active`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${user.token}`,
-      },
-      body: JSON.stringify({
-        is_active: nextActive,
-      }),
-    });
+    try {
+      await fetch(`${backendUrl}/live-products/${id}/active`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`,
+        },
+        body: JSON.stringify({
+          is_active: nextActive,
+        }),
+      });
 
-    // refresh list
-    fetchProducts();
-  } catch (err) {
-    console.error(err);
-    alert("Gagal mengubah status produk");
-  }
-};
+      // refresh list
+      fetchProducts();
+    } catch (err) {
+      console.error(err);
+      alert("Gagal mengubah status produk");
+    }
+  };
+
+
+  // ===============================
+// DOWNLOAD EXCEL
+// ===============================
+    const handleExcelDownload = async () => {
+      if (!user?.token) return;
+
+      if (!tiktokAccount) {
+        alert("Akun TikTok wajib diisi");
+        return;
+      }
+
+      try {
+        const url = `${backendUrl}/live-products/download-excel?tiktok_account=${tiktokAccount}`;
+
+        const res = await fetch(url, {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${user.token}`,
+            "ngrok-skip-browser-warning": "true",
+          },
+        });
+
+        if (!res.ok) {
+          const data = await res.json();
+          alert(data.error || "Gagal download Excel");
+          return;
+        }
+
+        const blob = await res.blob();
+        const downloadUrl = window.URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = downloadUrl;
+        a.download = `live-products-${tiktokAccount}.xlsx`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } catch (err) {
+        console.error(err);
+        alert("Server error");
+      }
+    };
 
 
   // ===============================
@@ -283,6 +327,9 @@ const uploadPhotoById = async (productId, file) => {
         `${backendUrl}/live-products/${product.id}/photo`,
         {
           method: "POST",
+          headers: {
+          Authorization: `Bearer ${user.token}`,
+          },
           body: formData,
         }
       );
@@ -398,14 +445,17 @@ const updateLiveStatus = async (id, nextStatus) => {
           </div>
         )}
 
-        {/* Upload Excel */}
-        <div className="mb-4">
+        {/* Upload & Download Excel */}
+        <div className="mb-4 space-y-2">
+
+          {/* Upload */}
           <button
             onClick={() => excelRef.current.click()}
             className="w-full bg-black text-white py-2 rounded-xl text-sm"
           >
             Upload Excel Produk
           </button>
+
           <input
             ref={excelRef}
             type="file"
@@ -413,7 +463,21 @@ const updateLiveStatus = async (id, nextStatus) => {
             hidden
             onChange={(e) => handleExcelUpload(e.target.files[0])}
           />
+
+          {/* Download */}
+          <button
+            onClick={handleExcelDownload}
+            disabled={!tiktokAccount}
+            className={`w-full py-2 rounded-xl text-sm text-white
+              ${tiktokAccount ? "bg-green-600" : "bg-gray-400 cursor-not-allowed"}
+            `}
+          >
+            Download Excel Produk
+          </button>
+
         </div>
+
+
             <button
               onClick={() => {
                 setEditingId("new");

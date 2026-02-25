@@ -3,22 +3,21 @@ import { useEffect, useRef, useState } from "react";
 import ChatMessage from "./ChatMessage";
 import "./chat.css";
 
-export default function ChatContainer({ messages, fetchProducts, onSelectProduct,onAddAnswer }) {
+
+export default function ChatContainer({ messages, fetchProducts, onSelectProduct, onAddAnswer, style }) {
   const containerRef = useRef(null);
   const bottomRef = useRef(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
 
-  // Detect user scroll position
+  // detect scroll position
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
 
     const handleScroll = () => {
-      const threshold = 100; // jarak toleransi px
+      const threshold = 100;
       const isBottom =
-        container.scrollHeight - container.scrollTop - container.clientHeight <
-        threshold;
-
+        container.scrollHeight - container.scrollTop - container.clientHeight < threshold;
       setIsAtBottom(isBottom);
     };
 
@@ -26,7 +25,7 @@ export default function ChatContainer({ messages, fetchProducts, onSelectProduct
     return () => container.removeEventListener("scroll", handleScroll);
   }, []);
 
-  // Auto scroll hanya jika memang sedang di bawah
+  // auto scroll
   useEffect(() => {
     if (isAtBottom) {
       bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -34,18 +33,20 @@ export default function ChatContainer({ messages, fetchProducts, onSelectProduct
   }, [messages, isAtBottom]);
 
   return (
-    <div className="chat-container" ref={containerRef}>
+    <div
+      className="chat-container"
+      ref={containerRef}
+    >
       {messages.map((msg) => (
         <ChatMessage
           key={msg.id}
           message={msg}
           fetchProducts={fetchProducts}
           onSelectProduct={onSelectProduct}
-           onAddAnswer={onAddAnswer}
+          onAddAnswer={onAddAnswer}
         />
       ))}
       <div ref={bottomRef} />
     </div>
   );
 }
-

@@ -1,3 +1,5 @@
+//ChatMessage.jsx
+
 import { useState } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import ProductThumbnail from "../components/ProductThumbnail";
