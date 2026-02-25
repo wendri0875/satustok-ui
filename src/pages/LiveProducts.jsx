@@ -37,7 +37,7 @@ export default function LiveProductSatustok() {
     });
 
     const data = await res.json();
-    console.log("FETCH RESULT:", data);
+   // console.log("FETCH RESULT:", data);
 
 setProducts(
   data.map(p => ({
@@ -605,8 +605,8 @@ return (
 
               {products.map((p, i) => {
                 const isActive = p.is_active;
-                console.log("Rendering product:", p.code, "isActive:", p.is_active);
-                console.log("FULL PRODUCT:", p);
+               // console.log("Rendering product:", p.code, "isActive:", p.is_active);
+              //  console.log("FULL PRODUCT:", p);
 
                 return (
 
