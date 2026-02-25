@@ -418,83 +418,89 @@ const updateLiveStatus = async (id, nextStatus) => {
   // ===============================
   // UI
   // ===============================
-  return (
-      <div className="min-h-screen bg-gray-100 p-1">
-        <div className="w-full max-w-xl md:max-w-2xl lg:max-w-4xl mx-auto bg-white rounded-2xl shadow p-1">
+return (
+  <div className="min-h-screen bg-gray-100 p-2">
+    <div className="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow p-4">
 
-        <h2 className="text-lg font-semibold text-center mb-4">
-          Live Product – Satustok
-        </h2>
+      {/* Header Compact */}
+      <div className="flex items-center gap-2 mb-4">
 
-        {/* TikTok Account */}
-        <div className="mb-3">
-          <label className="text-xs text-gray-600 mb-1 block">
-            Akun TikTok (sedang live)
-          </label>
-          <input
-            type="text"
-            value={tiktokAccount}
-            onChange={(e) => setTiktokAccount(e.target.value)}
-            className="w-full border rounded-xl px-3 py-2 text-sm"
-          />
-        </div>
+          {/* Status Indicator */}
+  <div className="text-lg">
+    {tiktokAccount ? "🟢" : "🔴"}
+  </div>
 
-        {tiktokAccount && (
-          <div className="text-xs text-green-600 text-center mb-3">
-            Live aktif untuk akun <b>{tiktokAccount}</b>
-          </div>
-        )}
+        {/* Input */}
+  {/* Input */}
+  <div className="flex-1">
+    <input
+      type="text"
+      placeholder="Akun TikTok sedang live..."
+      value={tiktokAccount}
+      onChange={(e) => setTiktokAccount(e.target.value)}
+      className="w-full border rounded-xl px-3 py-2 text-sm"
+    />
+  </div>
 
-        {/* Upload & Download Excel */}
-        <div className="mb-4 space-y-2">
+        {/* Emoji Buttons */}
+        `<div className="flex gap-2">
 
           {/* Upload */}
           <button
+            title="Upload Excel"
             onClick={() => excelRef.current.click()}
-            className="w-full bg-black text-white py-2 rounded-xl text-sm"
+            className="w-9 h-9 flex items-center justify-center 
+                      rounded-lg text-lg 
+                      hover:bg-gray-100 
+                      transition"
           >
-            Upload Excel Produk
+            📤
           </button>
-
-          <input
-            ref={excelRef}
-            type="file"
-            accept=".xls,.xlsx"
-            hidden
-            onChange={(e) => handleExcelUpload(e.target.files[0])}
-          />
 
           {/* Download */}
           <button
+            title="Download Excel"
             onClick={handleExcelDownload}
             disabled={!tiktokAccount}
-            className={`w-full py-2 rounded-xl text-sm text-white
-              ${tiktokAccount ? "bg-green-600" : "bg-gray-400 cursor-not-allowed"}
+            className={`w-9 h-9 flex items-center justify-center 
+              rounded-lg text-lg
+              ${tiktokAccount
+                ? "hover:bg-gray-100"
+                : "opacity-30 cursor-not-allowed"
+              }
+              transition
             `}
           >
-            Download Excel Produk
+            📥
+          </button>
+
+          {/* Add Manual */}
+          <button
+            title="Tambah Manual"
+            onClick={() => {
+              setEditingId("new");
+              setEditingSku("");
+              setEditingName("");
+              setEditingHighlight("");
+            }}
+            className="w-9 h-9 flex items-center justify-center 
+                      rounded-lg text-lg 
+                      hover:bg-gray-100 
+                      transition"
+          >
+            ➕
           </button>
 
         </div>
 
-
-            <button
-              onClick={() => {
-                setEditingId("new");
-                setEditingSku("");
-                setEditingName("");
-                setEditingHighlight("");
-              }}
-              className="
-                w-full mb-3
-                border-2 border-dashed border-blue-600
-                text-blue-600
-                py-2 rounded-xl text-sm
-              "
-            >
-            ➕ Tambah Manual 
-            </button>
-
+        <input
+          ref={excelRef}
+          type="file"
+          accept=".xls,.xlsx"
+          hidden
+          onChange={(e) => handleExcelUpload(e.target.files[0])}
+        />
+      </div>
           {/* Product List */}
           <div className="space-y-3">
 

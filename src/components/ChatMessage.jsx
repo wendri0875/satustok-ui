@@ -221,7 +221,9 @@ export default function ChatMessage({
                 border: "1px solid #ddd",
                 borderRadius: 8,
                 boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                zIndex: 9999
+                zIndex: 9999,
+                maxHeight: 300,      // 🔥 batas tinggi popup
+                overflowY: "auto"    // 🔥 aktifkan scroll di dalam popup
               }}
             >
               {loading && <div style={{ padding: 10 }}>Loading...</div>}
