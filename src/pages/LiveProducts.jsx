@@ -47,7 +47,7 @@ setProducts(
     name: p.name,
     highlight: p.highlight || "",
     photoUrl: p.photo_url ? `${p.photo_url}?ts=${Date.now()}` : "",
-    is_active: p.is_active !== 0,
+    is_active: p.is_active,
     live_status: p.live_status || null // 🔥 BARU
   }))
 );
@@ -237,31 +237,29 @@ const uploadPhotoById = async (productId, file) => {
     }
   };
 
-  const toggleActive = async (id, currentActive) => {
+const toggleActive = async (id, currentActive) => {
+  console.log("id:", id, "currentActive:", currentActive);
 
-    console.log("id:",id,"currentActive:",currentActive);
-    const nextActive =
-      currentActive === 0 ? 1 : 0; // null dianggap aktif
+  const nextActive = !currentActive;
 
-    try {
-      await fetch(`${backendUrl}/live-products/${id}/active`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${user.token}`,
-        },
-        body: JSON.stringify({
-          is_active: nextActive,
-        }),
-      });
+  try {
+    await fetch(`${backendUrl}/live-products/${id}/active`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${user.token}`,
+      },
+      body: JSON.stringify({
+        is_active: nextActive,
+      }),
+    });
 
-      // refresh list
-      fetchProducts();
-    } catch (err) {
-      console.error(err);
-      alert("Gagal mengubah status produk");
-    }
-  };
+    fetchProducts();
+  } catch (err) {
+    console.error(err);
+    alert("Gagal mengubah status produk");
+  }
+};
 
 
   // ===============================
@@ -606,7 +604,9 @@ return (
             )}
 
               {products.map((p, i) => {
-                const isActive = Number(p.is_active) !== 0;
+                const isActive = p.is_active;
+                console.log("Rendering product:", p.code, "isActive:", p.is_active);
+                console.log("FULL PRODUCT:", p);
 
                 return (
 
@@ -723,7 +723,7 @@ return (
                             <div className="absolute bottom-full left-0 mb-2 bg-white border rounded-lg shadow text-xs z-30 min-w-[160px]">
                               <button
                                 onClick={() => {
-                                  toggleActive(p.id, isActive ? 1 : 0);
+                                  toggleActive(p.id, p.is_active);
                                   setOpenMenuId(null);
                                 }}
                                 className="block w-full text-left px-3 py-2 hover:bg-gray-100"
