@@ -317,6 +317,7 @@ export default function HostAssistant() {
 
       {/* MODAL HIGHLIGHT */}
       {showHighlight && <HostHighlight
+        hostId={hostId}
         highlightText={highlightText}
         setHighlightText={setHighlightText}
         saveHighlight={saveHighlight}
