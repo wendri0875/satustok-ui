@@ -4,9 +4,19 @@ import PhotoPicker from "../components/PhotoPicker"
 
 export default function LiveProductSatustok() {
   const { user } = useAuth();
+  const PAGE_LIMIT = 10;
 
   const [tiktokAccount, setTiktokAccount] = useState("alhayya_gamis");
   const [products, setProducts] = useState([]);
+  const [searchInput, setSearchInput] = useState("");
+  const [searchKeyword, setSearchKeyword] = useState("");
+  const [page, setPage] = useState(1);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    total_pages: 0,
+    current_page: 1,
+    limit: PAGE_LIMIT,
+  });
   const [editingId, setEditingId] = useState(null);
   const [editingHighlight, setEditingHighlight] = useState("");
   const [editingEtalase, setEditingEtalase] = useState("");
@@ -28,7 +38,17 @@ export default function LiveProductSatustok() {
   const fetchProducts = useCallback(async () => {
     if (!user?.token || !tiktokAccount) return;
 
-    const url = `${backendUrl}/live-products?tiktok_account=${tiktokAccount}`;
+    const params = new URLSearchParams({
+      tiktok_account: tiktokAccount,
+      page: String(page),
+      limit: String(PAGE_LIMIT),
+    });
+
+    if (searchKeyword.trim()) {
+      params.set("search", searchKeyword.trim());
+    }
+
+    const url = `${backendUrl}/live-products?${params.toString()}`;
     const res = await fetch(url, {
       headers: {
         Authorization: `Bearer ${user.token}`,
@@ -36,11 +56,12 @@ export default function LiveProductSatustok() {
       },
     });
 
-    const data = await res.json();
-   // console.log("FETCH RESULT:", data);
+    const payload = await res.json();
+    const rows = Array.isArray(payload) ? payload : (payload?.data || []);
+   // console.log("FETCH RESULT:", payload);
 
 setProducts(
-  data.map(p => ({
+  rows.map(p => ({
     id: p.id,                 // 🔥 PENTING
     etalase: p.etalase,
     code: p.sku,
@@ -52,8 +73,24 @@ setProducts(
   }))
 );
 
+setPagination(
+  Array.isArray(payload)
+    ? {
+        total: rows.length,
+        total_pages: 1,
+        current_page: 1,
+        limit: PAGE_LIMIT,
+      }
+    : {
+        total: payload?.pagination?.total || 0,
+        total_pages: payload?.pagination?.total_pages || 0,
+        current_page: payload?.pagination?.current_page || page,
+        limit: payload?.pagination?.limit || PAGE_LIMIT,
+      }
+);
 
-  }, [user?.token, tiktokAccount, backendUrl]);
+
+  }, [user?.token, tiktokAccount, backendUrl, page, searchKeyword]);
 
   useEffect(() => {
     fetchProducts();
@@ -401,7 +438,7 @@ const updateLiveStatus = async (id, nextStatus) => {
 
 
 
-  const renderWA = (text = "") => {
+const renderWA = (text = "") => {
   let html = text
     .replace(/\*(.*?)\*/g, "<b>$1</b>")     // *bold*..
     .replace(/_(.*?)_/g, "<i>$1</i>")       // _italic_
@@ -410,6 +447,8 @@ const updateLiveStatus = async (id, nextStatus) => {
 
   return { __html: html };
 };
+
+const totalPages = Math.max(pagination.total_pages || 1, 1);
 
 
 
@@ -435,7 +474,10 @@ return (
       type="text"
       placeholder="Akun TikTok sedang live..."
       value={tiktokAccount}
-      onChange={(e) => setTiktokAccount(e.target.value)}
+      onChange={(e) => {
+        setTiktokAccount(e.target.value);
+        setPage(1);
+      }}
       className="w-full border rounded-xl px-3 py-2 text-sm"
     />
   </div>
@@ -499,6 +541,32 @@ return (
           onChange={(e) => handleExcelUpload(e.target.files[0])}
         />
       </div>
+
+      <div className="flex items-center gap-2 mb-3">
+        <input
+          type="text"
+          placeholder="Cari SKU, nama, etalase..."
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              setPage(1);
+              setSearchKeyword(searchInput.trim());
+            }
+          }}
+          className="flex-1 border rounded-xl px-3 py-2 text-sm"
+        />
+        <button
+          onClick={() => {
+            setPage(1);
+            setSearchKeyword(searchInput.trim());
+          }}
+          className="border rounded-xl px-3 py-2 text-sm"
+        >
+          Cari
+        </button>
+      </div>
+
           {/* Product List */}
           <div className="space-y-3">
 
@@ -823,6 +891,38 @@ return (
             {!products.length && tiktokAccount && (
               <div className="text-xs text-gray-400 text-center">
                 Belum ada produk untuk akun ini
+              </div>
+            )}
+
+            {!!products.length && (
+              <div className="flex items-center justify-between pt-2">
+                <button
+                  onClick={() => setPage((prev) => Math.max(prev - 1, 1))}
+                  disabled={page <= 1}
+                  className={`text-xs px-3 py-1 rounded-lg border ${
+                    page <= 1
+                      ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                      : "text-gray-700 border-gray-300"
+                  }`}
+                >
+                  Prev
+                </button>
+
+                <div className="text-xs text-gray-500">
+                  Page {page} / {totalPages} • Total {pagination.total || 0}
+                </div>
+
+                <button
+                  onClick={() => setPage((prev) => Math.min(prev + 1, totalPages))}
+                  disabled={page >= totalPages}
+                  className={`text-xs px-3 py-1 rounded-lg border ${
+                    page >= totalPages
+                      ? "text-gray-400 border-gray-200 cursor-not-allowed"
+                      : "text-gray-700 border-gray-300"
+                  }`}
+                >
+                  Next
+                </button>
               </div>
             )}
           </div>

@@ -135,13 +135,35 @@ export default function HostAssistant() {
   // ===============================
   // Fetch Products
   // ===============================
-  const fetchProducts = async () => {
-    if (!user?.token || !hostId) return [];
-    const url = `${backendUrl}/live-products?tiktok_account=alhayya_gamis`;
-    const res = await fetch(url, { headers: { Authorization: `Bearer ${user.token}`, "ngrok-skip-browser-warning":"true" } });
-    const data = await res.json();
-    
-    return data.map(p => ({
+  const fetchProducts = async ({ search = "", page = 1, limit = 10 } = {}) => {
+    if (!user?.token || !hostId) {
+      return {
+        data: [],
+        pagination: { total: 0, total_pages: 0, current_page: 1, limit }
+      };
+    }
+
+    const params = new URLSearchParams({
+      tiktok_account: hostId,
+      page: String(page),
+      limit: String(limit),
+    });
+
+    if (search?.trim()) {
+      params.set("search", search.trim());
+    }
+
+    const url = `${backendUrl}/live-products?${params.toString()}`;
+    const res = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${user.token}`,
+        "ngrok-skip-browser-warning": "true",
+      }
+    });
+    const payload = await res.json();
+
+    const rows = Array.isArray(payload) ? payload : (payload?.data || []);
+    const mapped = rows.map((p) => ({
       id: p.id,
       etalase: p.etalase,
       sku: p.sku,
@@ -152,6 +174,22 @@ export default function HostAssistant() {
       is_active: p.is_active,
       live_status: p.live_status || null,
     }));
+
+    const pagination = Array.isArray(payload)
+      ? {
+          total: mapped.length,
+          total_pages: 1,
+          current_page: 1,
+          limit: mapped.length || limit,
+        }
+      : {
+          total: payload?.pagination?.total || 0,
+          total_pages: payload?.pagination?.total_pages || 0,
+          current_page: payload?.pagination?.current_page || page,
+          limit: payload?.pagination?.limit || limit,
+        };
+
+    return { data: mapped, pagination };
   };
 
   const handleAssignProduct = async (message, product) => {

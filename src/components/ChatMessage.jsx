@@ -17,6 +17,15 @@ export default function ChatMessage({
   const [showPicker, setShowPicker] = useState(false);
   const [loading, setLoading] = useState(false);
   const [showSOS, setShowSOS] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [limit] = useState(8);
+  const [pagination, setPagination] = useState({
+    total: 0,
+    total_pages: 0,
+    current_page: 1,
+    limit: 8
+  });
 
   const [showHighlight, setShowHighlight] = useState(false);
   const [highlightData, setHighlightData] = useState(null);
@@ -25,18 +34,39 @@ export default function ChatMessage({
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const hasProduct = !!message.lastProductId;
 
+  const loadProducts = async ({ search = "", nextPage = 1 } = {}) => {
+    setLoading(true);
+    try {
+      const result = await fetchProducts({
+        search,
+        page: nextPage,
+        limit
+      });
+
+      const rows = Array.isArray(result) ? result : (result?.data || []);
+      const activeOnly = rows.filter((p) => p.is_active);
+      setProducts(activeOnly);
+      setPagination(
+        result?.pagination || {
+          total: activeOnly.length,
+          total_pages: 1,
+          current_page: nextPage,
+          limit
+        }
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
   /* =========================
      FETCH PRODUCT LIST
   ========================= */
   const handleOpenPicker = async () => {
     if (!showPicker) {
-      setLoading(true);
-      const data = await fetchProducts();
-     // console.log("BEFORE FILTER:", data);
-      const activeOnly = data.filter(p => p.is_active);
-     // console.log("AFTER FILTER:", activeOnly);
-      setProducts(activeOnly);
-      setLoading(false);
+      const firstPage = 1;
+      setPage(firstPage);
+      await loadProducts({ search: searchTerm, nextPage: firstPage });
     }
     setShowPicker(!showPicker);
   };
@@ -63,7 +93,8 @@ export default function ChatMessage({
       }
 
       const data = await res.json();
-      setHighlightData(data.highlight || "");
+      const product = data?.rows?.[0] || data;
+      setHighlightData(product?.highlight || "");
     } catch (err) {
       console.error("Fetch highlight error:", err);
       setHighlightData("Gagal mengambil highlight");
@@ -229,7 +260,39 @@ export default function ChatMessage({
                 overflowY: "auto"    // 🔥 aktifkan scroll di dalam popup
               }}
             >
+              <div style={{ padding: 8, borderBottom: "1px solid #eee" }}>
+                <input
+                  type="text"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={async (e) => {
+                    if (e.key === "Enter") {
+                      const firstPage = 1;
+                      setPage(firstPage);
+                      await loadProducts({
+                        search: searchTerm,
+                        nextPage: firstPage
+                      });
+                    }
+                  }}
+                  placeholder="Cari SKU / nama / etalase"
+                  style={{
+                    width: "100%",
+                    fontSize: 12,
+                    padding: "6px 8px",
+                    border: "1px solid #ddd",
+                    borderRadius: 6
+                  }}
+                />
+              </div>
+
               {loading && <div style={{ padding: 10 }}>Loading...</div>}
+
+              {!loading && products.length === 0 && (
+                <div style={{ padding: 10, fontSize: 12, color: "#666" }}>
+                  Produk tidak ditemukan
+                </div>
+              )}
 
               {!loading &&
                 products.map((p) => (
@@ -256,6 +319,60 @@ export default function ChatMessage({
                     <span>{p.sku}</span>
                   </div>
                 ))}
+
+              {!loading && (
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    gap: 8,
+                    padding: 8,
+                    borderTop: "1px solid #eee",
+                    fontSize: 11
+                  }}
+                >
+                  <button
+                    disabled={page <= 1}
+                    onClick={async () => {
+                      const next = Math.max(page - 1, 1);
+                      setPage(next);
+                      await loadProducts({ search: searchTerm, nextPage: next });
+                    }}
+                    style={{
+                      border: "1px solid #ddd",
+                      background: page <= 1 ? "#f5f5f5" : "#fff",
+                      borderRadius: 6,
+                      padding: "4px 8px",
+                      cursor: page <= 1 ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    Prev
+                  </button>
+
+                  <span>
+                    {pagination.current_page || page} / {pagination.total_pages || 1}
+                  </span>
+
+                  <button
+                    disabled={page >= (pagination.total_pages || 1)}
+                    onClick={async () => {
+                      const next = page + 1;
+                      setPage(next);
+                      await loadProducts({ search: searchTerm, nextPage: next });
+                    }}
+                    style={{
+                      border: "1px solid #ddd",
+                      background: page >= (pagination.total_pages || 1) ? "#f5f5f5" : "#fff",
+                      borderRadius: 6,
+                      padding: "4px 8px",
+                      cursor: page >= (pagination.total_pages || 1) ? "not-allowed" : "pointer"
+                    }}
+                  >
+                    Next
+                  </button>
+                </div>
+              )}
             </div>
           )}
         </div>
