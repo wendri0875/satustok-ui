@@ -34,71 +34,104 @@ export default function HostAssistant() {
   // ===============================
   // WEBSOCKET
   // ===============================
-  useEffect(() => {
-    if (!user?.token) return;
+    useEffect(() => {
+      if (!user?.token) return;
 
-    const ws = new WebSocket(wsUrl);
-    wsRef.current = ws;
+      let ws;
+      let reconnectTimer;
 
-    ws.onopen = () => console.log("WS CONNECTED");
+      const connect = () => {
+        ws = new WebSocket(wsUrl);
+        wsRef.current = ws;
 
-    ws.onmessage = (e) => {
-      let data;
-      try { data = JSON.parse(e.data); } 
-      catch { return; }
+        ws.onopen = () => {
+          console.log("WS CONNECTED");
+        };
 
-      switch (data.type) {
-        case "live_status":
-          setStatus(data.status);
-          break;
+        ws.onmessage = (e) => {
+          let data;
+          try { data = JSON.parse(e.data); }
+          catch { return; }
 
-        case "live_comment":
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: data.commentId,
-              hostId: hostId,
-              userId: data.userId,
-              nickname: data.nickname,
-              text: data.comment,
-              assisted: false,
-              lastProductId: data.lastProductId || null,
-              lastPhotoUrl: data.lastPhotoUrl || null,
-              lastSku: data.lastSku || null,
-              lastUpdatedAt: data.lastUpdatedAt || null,
-              answers: []
-            }
-          ]);
-          break;
+          switch (data.type) {
+            case "live_status":
+              setStatus(data.status);
+              break;
 
-        case "assistant_reply":
-          if (data.channel !== "HOST_ASSISTANT") return;
-          setMessages((prev) =>
-            prev.map((msg) =>
-              msg.id === data.data.commentId
-                ? {
-                    ...msg,
-                    assisted: true,
-                    answers: [...(msg.answers || []), {
-                      text: data.data.text,
-                      productCode: data.data.productCode
-                    }]
-                  }
-                : msg
-            )
-          );
-          break;
+            case "live_comment":
+              setMessages(prev => [...prev, {
+                id: data.commentId,
+                hostId,
+                userId: data.userId,
+                nickname: data.nickname,
+                text: data.comment,
+                assisted: false,
+                lastProductId: data.lastProductId || null,
+                lastPhotoUrl: data.lastPhotoUrl || null,
+                lastSku: data.lastSku || null,
+                lastUpdatedAt: data.lastUpdatedAt || null,
+                answers: []
+              }]);
+              break;
 
-        default:
-          console.warn("WS UNKNOWN TYPE:", data);
-      }
-    };
+            case "assistant_reply":
+              if (data.channel !== "HOST_ASSISTANT") return;
+              setMessages(prev =>
+                prev.map(msg =>
+                  msg.id === data.data.commentId
+                    ? {
+                        ...msg,
+                        assisted: true,
+                        answers: [...(msg.answers || []), {
+                          text: data.data.text,
+                          productCode: data.data.productCode
+                        }]
+                      }
+                    : msg
+                )
+              );
+              break;
+          }
+        };
 
-    ws.onerror = (err) => console.error("WS ERROR:", err);
-    ws.onclose = (event) => console.log("WS CLOSED:", event);
+        ws.onclose = () => {
+          console.log("WS CLOSED → reconnecting...");
+          reconnectTimer = setTimeout(connect, 2000);
+        };
 
-    return () => ws.close();
-  }, [user?.token]);
+        ws.onerror = () => {
+          ws.close();
+        };
+      };
+
+      connect();
+
+      // 🔥 Reconnect saat balik dari background
+      const handleVisibility = () => {
+        if (document.visibilityState === "visible") {
+          if (!ws || ws.readyState !== WebSocket.OPEN) {
+            console.log("Reconnecting after visibility change...");
+            connect();
+          }
+        }
+      };
+
+      document.addEventListener("visibilitychange", handleVisibility);
+
+      // 🔥 Heartbeat tiap 25 detik
+      const heartbeat = setInterval(() => {
+        if (ws && ws.readyState === WebSocket.OPEN) {
+          ws.send(JSON.stringify({ type: "ping" }));
+        }
+      }, 25000);
+
+      return () => {
+        clearInterval(heartbeat);
+        clearTimeout(reconnectTimer);
+        document.removeEventListener("visibilitychange", handleVisibility);
+        if (ws) ws.close();
+      };
+    }, [user?.token, hostId]);
 
   // ===============================
   // START / STOP ASSISTANT
