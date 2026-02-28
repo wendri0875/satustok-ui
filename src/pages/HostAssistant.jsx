@@ -26,121 +26,156 @@ export default function HostAssistant() {
   const [showHighlight, setShowHighlight] = useState(false);
   const [highlightText, setHighlightText] = useState("");
 
-
   useEffect(() => {
-  window.scrollTo(0, 0);
-}, []);
+    window.scrollTo(0, 0);
+  }, []);
 
   // ===============================
   // WEBSOCKET
   // ===============================
-    useEffect(() => {
-      if (!user?.token) return;
+  useEffect(() => {
+    if (!user?.token) return;
+    if (status !== "online") return; // 🔥 hanya connect kalau online
 
-      let ws;
-      let reconnectTimer;
+    let reconnectTimer;
 
-      const connect = () => {
-        ws = new WebSocket(wsUrl);
-        wsRef.current = ws;
+    const connect = () => {
+      if (wsRef.current) return;
 
-        ws.onopen = () => {
-          console.log("WS CONNECTED");
-        };
+      const socket = new WebSocket(`${wsUrl}?hostId=${hostId}`);
+      wsRef.current = socket;
 
-        ws.onmessage = (e) => {
-          let data;
-          try { data = JSON.parse(e.data); }
-          catch { return; }
+      socket.onopen = () => {
+        console.log("WS CONNECTED");
+      };
 
-          switch (data.type) {
-            case "live_status":
-              setStatus(data.status);
-              break;
+      socket.onmessage = (e) => {
+        let data;
+        try { data = JSON.parse(e.data); } catch { return; }
 
-            case "live_comment":
-              setMessages(prev => [...prev, {
-                id: data.commentId,
-                hostId,
-                userId: data.userId,
-                nickname: data.nickname,
-                text: data.comment,
-                assisted: false,
-                lastProductId: data.lastProductId || null,
-                lastPhotoUrl: data.lastPhotoUrl || null,
-                lastSku: data.lastSku || null,
-                lastUpdatedAt: data.lastUpdatedAt || null,
-                answers: []
-              }]);
-              break;
+        switch (data.type) {
+          case "live_status":
+            setStatus(data.status);
+            break;
 
-            case "assistant_reply":
-              if (data.channel !== "HOST_ASSISTANT") return;
-              setMessages(prev =>
-                prev.map(msg =>
-                  msg.id === data.data.commentId
-                    ? {
-                        ...msg,
-                        assisted: true,
-                        answers: [...(msg.answers || []), {
-                          text: data.data.text,
-                          productCode: data.data.productCode
-                        }]
-                      }
-                    : msg
-                )
-              );
-              break;
-          }
-        };
+          case "live_comment":
+            setMessages(prev => [...prev, {
+              id: data.commentId,
+              hostId,
+              userId: data.userId,
+              nickname: data.nickname,
+              text: data.comment,
+              assisted: false,
+              lastProductId: data.lastProductId || null,
+              lastPhotoUrl: data.lastPhotoUrl || null,
+              lastSku: data.lastSku || null,
+              lastUpdatedAt: data.lastUpdatedAt || null,
+              answers: []
+            }]);
+            break;
 
-        ws.onclose = () => {
-          console.log("WS CLOSED → reconnecting...");
+          case "assistant_reply":
+            if (data.channel !== "HOST_ASSISTANT") return;
+            setMessages(prev =>
+              prev.map(msg =>
+                msg.id === data.data.commentId
+                  ? {
+                      ...msg,
+                      assisted: true,
+                      answers: [...(msg.answers || []), {
+                        text: data.data.text,
+                        productCode: data.data.productCode
+                      }]
+                    }
+                  : msg
+              )
+            );
+            break;
+        }
+      };
+
+      socket.onclose = () => {
+        console.log("WS CLOSED");
+        wsRef.current = null;
+
+        if (status === "online") {
           reconnectTimer = setTimeout(connect, 2000);
-        };
-
-        ws.onerror = () => {
-          ws.close();
-        };
-      };
-
-      connect();
-
-      // 🔥 Reconnect saat balik dari background
-      const handleVisibility = () => {
-        if (document.visibilityState === "visible") {
-          if (!ws || ws.readyState !== WebSocket.OPEN) {
-            console.log("Reconnecting after visibility change...");
-            connect();
-          }
         }
       };
 
-      document.addEventListener("visibilitychange", handleVisibility);
-
-      // 🔥 Heartbeat tiap 25 detik
-      const heartbeat = setInterval(() => {
-        if (ws && ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify({ type: "ping" }));
-        }
-      }, 25000);
-
-      return () => {
-        clearInterval(heartbeat);
-        clearTimeout(reconnectTimer);
-        document.removeEventListener("visibilitychange", handleVisibility);
-        if (ws) ws.close();
+      socket.onerror = () => {
+        socket.close();
       };
-    }, [user?.token, hostId]);
+    };
+
+    connect();
+
+    return () => {
+      clearTimeout(reconnectTimer);
+      if (wsRef.current) {
+        wsRef.current.close();
+        wsRef.current = null;
+      }
+    };
+  }, [user?.token, hostId, status]);
 
   // ===============================
   // START / STOP ASSISTANT
   // ===============================
   async function startAssistant() {
-    if (!hostId) return alert("Akun TikTok wajib diisi");
+    if (!hostId) {
+      alert("Akun TikTok wajib diisi");
+      return;
+    }
+
+    if (status === "connecting" || status === "online") {
+      console.log("Assistant already running or connecting");
+      return;
+    }
+
     setStatus("connecting");
+
     try {
-      await fetch(`${backendUrl}/ai/live/start`, {
+      const res = await fetch(`${backendUrl}/ai/live/start`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${user.token}`
+        },
+        body: JSON.stringify({ hostId })
+      });
+
+      if (!res.ok) {
+        const errorText = await res.text();
+        throw new Error(errorText || "Gagal start assistant");
+      }
+
+      const result = await res.json().catch(() => ({}));
+
+      if (result?.success === false) {
+        throw new Error(result.message || "Gagal start assistant");
+      }
+
+      setStatus("online");
+      console.log("Assistant connected");
+
+    } catch (err) {
+      console.error("Start error:", err);
+      setStatus("offline");
+      alert("Gagal menghubungkan ke TikTok Live");
+    }
+  }
+
+  async function stopAssistant() {
+    if (!hostId) {
+      alert("Host belum dipilih");
+      return;
+    }
+
+    if (status === "offline") return;
+
+    try {
+      await fetch(`${backendUrl}/ai/live/stop`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -149,24 +184,21 @@ export default function HostAssistant() {
         body: JSON.stringify({ hostId })
       });
     } catch (err) {
-      console.error(err);
-      setStatus("offline");
-      alert("Gagal menghubungkan ke TikTok Live");
+      console.error("Stop error:", err);
     }
-  }
 
-  async function stopAssistant() {
-    try {
-      await fetch(`${backendUrl}/ai/live/stop`, {
-        method: "POST",
-        headers: { Authorization: `Bearer ${user.token}` }
-      });
-    } catch (err) { console.error(err); }
+    // 🔥 Tutup WS client ini saja
+    if (wsRef.current) {
+      wsRef.current.close();
+      wsRef.current = null;
+    }
+
     setStatus("offline");
+    console.log(`Assistant stopped for host: ${hostId}`);
   }
 
   // ===============================
-  // Fetch Products
+  // FETCH PRODUCTS
   // ===============================
   const fetchProducts = async ({ search = "", page = 1, limit = 10 } = {}) => {
     if (!user?.token || !hostId) {
@@ -209,12 +241,7 @@ export default function HostAssistant() {
     }));
 
     const pagination = Array.isArray(payload)
-      ? {
-          total: mapped.length,
-          total_pages: 1,
-          current_page: 1,
-          limit: mapped.length || limit,
-        }
+      ? { total: mapped.length, total_pages: 1, current_page: 1, limit: mapped.length || limit }
       : {
           total: payload?.pagination?.total || 0,
           total_pages: payload?.pagination?.total_pages || 0,
@@ -225,6 +252,9 @@ export default function HostAssistant() {
     return { data: mapped, pagination };
   };
 
+  // ===============================
+  // HANDLE PRODUCT ASSIGN & ANSWER
+  // ===============================
   const handleAssignProduct = async (message, product) => {
     setMessages(prev =>
       prev.map(m =>
@@ -233,6 +263,7 @@ export default function HostAssistant() {
           : m
       )
     );
+
     await fetch(`${backendUrl}/ai/live/manual-assign`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${user.token}` },
@@ -252,12 +283,15 @@ export default function HostAssistant() {
     setMessages(prev =>
       prev.map(m =>
         m.id === message.id
-          ? { ...m, assisted: true, answers: [...(m.answers||[]), { text: answerText, fromSOS: true, createdAt: new Date().toISOString() }] }
+          ? { ...m, assisted: true, answers: [...(m.answers || []), { text: answerText, fromSOS: true, createdAt: new Date().toISOString() }] }
           : m
       )
     );
   };
 
+  // ===============================
+  // FETCH / SAVE HIGHLIGHT
+  // ===============================
   const fetchHighlight = async () => {
     if (!hostId) return;
     try {
@@ -286,7 +320,6 @@ export default function HostAssistant() {
   // ===============================
   return (
     <div className="chat-page" style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: "sans-serif" }}>
-
       {/* HEADER FIXED */}
       <div className="chat-header" style={{
         position: "sticky", top: 0, zIndex: 10,
@@ -294,7 +327,6 @@ export default function HostAssistant() {
         padding: "8px 16px", background: "#fff",
         boxShadow: "0 2px 5px rgba(0,0,0,0.1)", borderBottom: "1px solid #ddd"
       }}>
-        {/* LEFT STATUS + INPUT */}
         <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
           <span style={{ fontSize: "18px" }}>{status === "online" ? "🟢" : status === "connecting" ? "🟡" : "🔴"}</span>
           <input
@@ -315,22 +347,14 @@ export default function HostAssistant() {
           />
         </div>
 
-        {/* RIGHT BUTTONS */}
         <div style={{ display:"flex", gap:"6px" }}>
           {status==="offline" ? (
-            <button
-              onClick={startAssistant}
-              style={buttonStyle}
-              title="Mulai">▶️</button>
+            <button onClick={startAssistant} style={buttonStyle} title="Mulai">▶️</button>
           ) : (
-            <button
-              onClick={stopAssistant}
-              style={buttonStyle}
-              title="Stop">⏹️</button>
+            <button onClick={stopAssistant} style={buttonStyle} title="Stop">⏹️</button>
           )}
 
-          <button
-            onClick={() => {
+          <button onClick={() => {
               if(!hostId){ alert("Isi dulu Username TikTok"); return;}
               setShowHighlight(prev => !prev);
               if(!showHighlight) fetchHighlight();
