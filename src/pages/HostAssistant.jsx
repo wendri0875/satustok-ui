@@ -209,7 +209,7 @@ export default function HostAssistant() {
     }
 
     const params = new URLSearchParams({
-      tiktok_account: hostId,
+      tiktok_account:"alhayya_gamis",//hostId,
       page: String(page),
       limit: String(limit),
     });
