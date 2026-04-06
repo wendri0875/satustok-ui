@@ -1,6 +1,6 @@
 //ChatMessage.jsx
 
-import { useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useAuth } from "../auth/AuthProvider";
 import ProductThumbnail from "../components/ProductThumbnail";
 import SOSPanel from "../components/SOSPanel";
@@ -30,9 +30,90 @@ export default function ChatMessage({
   const [showHighlight, setShowHighlight] = useState(false);
   const [highlightData, setHighlightData] = useState(null);
   const [loadingHighlight, setLoadingHighlight] = useState(false);
+  const [pickerPlacement, setPickerPlacement] = useState("down");
+  const [highlightPlacement, setHighlightPlacement] = useState("down");
+  const [pickerStyle, setPickerStyle] = useState(null);
+  const [highlightStyle, setHighlightStyle] = useState(null);
+
+  const pickerContainerRef = useRef(null);
+  const pickerButtonRef = useRef(null);
+  const highlightButtonRef = useRef(null);
+  const pickerInputRef = useRef(null);
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const hasProduct = !!message.lastProductId;
+
+  const updateOverlayPlacement = () => {
+    const viewport = window.visualViewport;
+    const viewportHeight = viewport?.height || window.innerHeight || 0;
+    const viewportWidth = viewport?.width || window.innerWidth || 0;
+    const offsetTop = viewport?.offsetTop || 0;
+    const offsetLeft = viewport?.offsetLeft || 0;
+    const viewportBottom = offsetTop + viewportHeight;
+    const margin = 8;
+
+    if (pickerButtonRef.current) {
+      const rect = pickerButtonRef.current.getBoundingClientRect();
+      const panelWidth = Math.min(260, Math.max(220, viewportWidth - 24));
+      const estimatedPickerHeight = 520;
+      const spaceBelow = viewportBottom - rect.bottom - margin;
+      const spaceAbove = rect.top - offsetTop - margin;
+      const nextPlacement =
+        spaceBelow < estimatedPickerHeight && spaceAbove > spaceBelow ? "up" : "down";
+      const maxHeight = Math.max(
+        260,
+        Math.min(520, (nextPlacement === "up" ? spaceAbove : spaceBelow) - 4)
+      );
+      const left = Math.max(
+        offsetLeft + margin,
+        Math.min(rect.right - panelWidth, offsetLeft + viewportWidth - panelWidth - margin)
+      );
+      const top =
+        nextPlacement === "up"
+          ? Math.max(offsetTop + margin, rect.top - maxHeight - margin)
+          : Math.max(offsetTop + margin, Math.min(rect.bottom + margin, viewportBottom - maxHeight - margin));
+
+      setPickerPlacement(nextPlacement);
+      setPickerStyle({
+        position: "fixed",
+        top,
+        left,
+        width: panelWidth,
+        maxHeight,
+      });
+    }
+
+    if (highlightButtonRef.current) {
+      const rect = highlightButtonRef.current.getBoundingClientRect();
+      const panelWidth = Math.min(280, Math.max(240, viewportWidth - 24));
+      const estimatedHighlightHeight = 240;
+      const spaceBelow = viewportBottom - rect.bottom - margin;
+      const spaceAbove = rect.top - offsetTop - margin;
+      const nextPlacement =
+        spaceBelow < estimatedHighlightHeight && spaceAbove > spaceBelow ? "up" : "down";
+      const maxHeight = Math.max(
+        180,
+        Math.min(280, (nextPlacement === "up" ? spaceAbove : spaceBelow) - 4)
+      );
+      const left = Math.max(
+        offsetLeft + margin,
+        Math.min(rect.right - panelWidth, offsetLeft + viewportWidth - panelWidth - margin)
+      );
+      const top =
+        nextPlacement === "up"
+          ? Math.max(offsetTop + margin, rect.top - maxHeight - margin)
+          : Math.max(offsetTop + margin, Math.min(rect.bottom + margin, viewportBottom - maxHeight - margin));
+
+      setHighlightPlacement(nextPlacement);
+      setHighlightStyle({
+        position: "fixed",
+        top,
+        left,
+        width: panelWidth,
+        maxHeight,
+      });
+    }
+  };
 
   const loadProducts = async ({ search = "", nextPage = 1 } = {}) => {
     setLoading(true);
@@ -70,6 +151,46 @@ export default function ChatMessage({
     }
     setShowPicker(!showPicker);
   };
+
+  useEffect(() => {
+    if (!showPicker && !showHighlight) {
+      return undefined;
+    }
+
+    updateOverlayPlacement();
+
+    const handleViewportChange = () => {
+      updateOverlayPlacement();
+    };
+
+    window.addEventListener("resize", handleViewportChange);
+    window.addEventListener("scroll", handleViewportChange, true);
+    window.visualViewport?.addEventListener("resize", handleViewportChange);
+    window.visualViewport?.addEventListener("scroll", handleViewportChange);
+
+    return () => {
+      window.removeEventListener("resize", handleViewportChange);
+      window.removeEventListener("scroll", handleViewportChange, true);
+      window.visualViewport?.removeEventListener("resize", handleViewportChange);
+      window.visualViewport?.removeEventListener("scroll", handleViewportChange);
+    };
+  }, [showPicker, showHighlight]);
+
+  useEffect(() => {
+    if (!showPicker) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      updateOverlayPlacement();
+      pickerInputRef.current?.scrollIntoView({
+        block: "nearest",
+        inline: "nearest",
+      });
+    }, 50);
+
+    return () => window.clearTimeout(timer);
+  }, [showPicker]);
 
   /* =========================
      FETCH PRODUCT DETAIL (SELECT *)
@@ -134,6 +255,7 @@ export default function ChatMessage({
 
         {/* PRODUCT PICKER BLOCK */}
         <div
+          ref={pickerContainerRef}
           style={{
             position: "relative",
             display: "flex",
@@ -144,14 +266,17 @@ export default function ChatMessage({
         >
           {/* BUTTON PICKER */}
           <button
+            ref={pickerButtonRef}
             onClick={handleOpenPicker}
+            disabled={showPicker || showHighlight}
             style={{
               fontSize: 12,
               padding: 4,
               borderRadius: 8,
               border: "1px solid #ddd",
               background: "#fff",
-              cursor: "pointer"
+              cursor: showPicker || showHighlight ? "not-allowed" : "pointer",
+              opacity: showPicker || showHighlight ? 0.72 : 1
             }}
           >
             {hasProduct ? (
@@ -187,7 +312,9 @@ export default function ChatMessage({
           {/* INTIP BUTTON */}
           {hasProduct && (
             <button
+              ref={highlightButtonRef}
               onClick={handleToggleHighlight}
+              disabled={showPicker || showHighlight}
               style={{
                 fontSize: 10,
                 padding: "2px 6px",
@@ -195,7 +322,8 @@ export default function ChatMessage({
                 border: "1px solid #1677ff",
                 background: "#fff",
                 color: "#1677ff",
-                cursor: "pointer"
+                cursor: showPicker || showHighlight ? "not-allowed" : "pointer",
+                opacity: showPicker || showHighlight ? 0.72 : 1
               }}
             >
               👀 {showHighlight ? "Tutup" : "Intip"}
@@ -204,67 +332,148 @@ export default function ChatMessage({
 
           {/* HIGHLIGHT BOX */}
           {showHighlight && (
-            <div
-              style={{
-                position: "absolute",
-                top: 100,
-                right: 0,
-                width: 260,
-                background: "#fff",
-                border: "1px solid #ddd",
-                borderRadius: 8,
-                padding: 10,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                zIndex: 9999
-              }}
-            >
+            <>
               <div
                 style={{
-                  fontSize: 12,
-                  fontWeight: 600,
-                  marginBottom: 6
+                  position: "fixed",
+                  inset: 0,
+                  background: "rgba(15, 23, 42, 0.16)",
+                  zIndex: 9998
+                }}
+              />
+              <div
+                style={{
+                  ...highlightStyle,
+                  background: "#fff",
+                  border: "1px solid #ddd",
+                  borderRadius: 8,
+                  padding: 10,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  zIndex: 9999,
+                  overflowY: "auto"
                 }}
               >
-                ✨ Highlight Produk
-              </div>
-
-              {loadingHighlight ? (
-                <div style={{ fontSize: 13 }}>Loading...</div>
-              ) : (
                 <div
                   style={{
-                    fontSize: 13,
-                    whiteSpace: "pre-wrap"
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    marginBottom: 6
                   }}
                 >
-                  {highlightData || "Tidak ada highlight"}
+                  <div
+                    style={{
+                      fontSize: 12,
+                      fontWeight: 600
+                    }}
+                  >
+                    ✨ Highlight Produk
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowHighlight(false)}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 999,
+                      background: "#fff",
+                      color: "#475569",
+                      cursor: "pointer",
+                      lineHeight: 1
+                    }}
+                  >
+                    ×
+                  </button>
                 </div>
-              )}
-            </div>
+
+                {loadingHighlight ? (
+                  <div style={{ fontSize: 13 }}>Loading...</div>
+                ) : (
+                  <div
+                    style={{
+                      fontSize: 13,
+                      whiteSpace: "pre-wrap"
+                    }}
+                  >
+                    {highlightData || "Tidak ada highlight"}
+                  </div>
+                )}
+              </div>
+            </>
           )}
 
           {/* PRODUCT PICKER DROPDOWN */}
           {showPicker && (
-            <div
-              style={{
-                position: "absolute",
-                right: 0,
-                top: 60,
-                width: 220,
-                background: "#fff",
-                border: "1px solid #ddd",
-                borderRadius: 8,
-                boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
-                zIndex: 9999,
-                maxHeight: 300,      // 🔥 batas tinggi popup
-                overflowY: "auto"    // 🔥 aktifkan scroll di dalam popup
-              }}
-            >
-              <div style={{ padding: 8, borderBottom: "1px solid #eee" }}>
+            <>
+              <div
+                style={{
+                  position: "fixed",
+                  inset: 0,
+                  background: "rgba(15, 23, 42, 0.16)",
+                  zIndex: 9998
+                }}
+              />
+              <div
+                style={{
+                  ...pickerStyle,
+                  background: "#fff",
+                  border: "1px solid #ddd",
+                  borderRadius: 8,
+                  boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  zIndex: 9999,
+                  overflowY: "auto",
+                  scrollbarWidth: "thin",
+                  scrollbarColor: "#f59e0b #fde7c7"
+                }}
+              >
+              <div
+                style={{
+                  position: "sticky",
+                  top: 0,
+                  zIndex: 1,
+                  padding: 8,
+                  borderBottom: "1px solid #eee",
+                  background: "#fff"
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                    gap: 8,
+                    marginBottom: 8
+                  }}
+                >
+                  <span style={{ fontSize: 12, fontWeight: 700, color: "#7c2d12" }}>
+                    Pilih Produk
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setShowPicker(false)}
+                    style={{
+                      width: 24,
+                      height: 24,
+                      border: "1px solid #e5e7eb",
+                      borderRadius: 999,
+                      background: "#fff",
+                      color: "#475569",
+                      cursor: "pointer",
+                      lineHeight: 1
+                    }}
+                  >
+                    ×
+                  </button>
+                </div>
                 <input
+                  ref={pickerInputRef}
                   type="text"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  onFocus={() => window.setTimeout(updateOverlayPlacement, 150)}
                   onKeyDown={async (e) => {
                     if (e.key === "Enter") {
                       const firstPage = 1;
@@ -373,7 +582,24 @@ export default function ChatMessage({
                   </button>
                 </div>
               )}
-            </div>
+
+              {!loading && products.length > 3 && (
+                <div
+                  style={{
+                    position: "sticky",
+                    bottom: 0,
+                    padding: "4px 8px 6px",
+                    fontSize: 10,
+                    textAlign: "center",
+                    color: "#92400e",
+                    background: "linear-gradient(to top, rgba(255,247,237,0.98), rgba(255,247,237,0.78), rgba(255,247,237,0))"
+                  }}
+                >
+                  Geser ke atas/bawah untuk lihat produk lain
+                </div>
+              )}
+              </div>
+            </>
           )}
         </div>
       </div>

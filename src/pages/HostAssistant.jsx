@@ -9,6 +9,16 @@ import HostHighlight from "../components/HostHighlight";
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 const wsUrl = import.meta.env.VITE_WS_URL;
 
+function normalizeHostId(value) {
+  return (value || "")
+    .toString()
+    .trim()
+    .toLowerCase()
+    .replace(/^@/, "")
+    .replace(/^https:\/\/www\.tiktok\.com\/@/i, "")
+    .replace(/^https:\/\/tiktok\.com\/@/i, "");
+}
+
 export default function HostAssistant() {
   const { user } = useAuth();
   const chatContainerRef = useRef(null);
@@ -38,11 +48,12 @@ export default function HostAssistant() {
     if (status !== "online") return; // 🔥 hanya connect kalau online
 
     let reconnectTimer;
+    const activeHostId = normalizeHostId(hostId);
 
     const connect = () => {
       if (wsRef.current) return;
 
-      const socket = new WebSocket(`${wsUrl}?hostId=${hostId}`);
+      const socket = new WebSocket(`${wsUrl}?hostId=${activeHostId}`);
       wsRef.current = socket;
 
       socket.onopen = () => {
@@ -53,6 +64,11 @@ export default function HostAssistant() {
         let data;
         try { data = JSON.parse(e.data); } catch { return; }
 
+        const payloadHostId = normalizeHostId(data.hostId);
+        if (payloadHostId && payloadHostId !== activeHostId) {
+          return;
+        }
+
         switch (data.type) {
           case "live_status":
             setStatus(data.status);
@@ -61,7 +77,7 @@ export default function HostAssistant() {
           case "live_comment":
             setMessages(prev => [...prev, {
               id: data.commentId,
-              hostId,
+              hostId: data.hostId || activeHostId,
               userId: data.userId,
               nickname: data.nickname,
               text: data.comment,
@@ -134,6 +150,7 @@ export default function HostAssistant() {
     }
 
     setStatus("connecting");
+    setMessages([]);
 
     try {
       const res = await fetch(`${backendUrl}/ai/live/start`, {
@@ -194,6 +211,7 @@ export default function HostAssistant() {
     }
 
     setStatus("offline");
+    setMessages([]);
     console.log(`Assistant stopped for host: ${hostId}`);
   }
 
@@ -209,7 +227,7 @@ export default function HostAssistant() {
     }
 
     const params = new URLSearchParams({
-      tiktok_account:"alhayya_gamis",//hostId,
+      tiktok_account: "alhayya_gamis",
       page: String(page),
       limit: String(limit),
     });
@@ -322,13 +340,31 @@ export default function HostAssistant() {
     <div className="chat-page" style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: "sans-serif" }}>
       {/* HEADER FIXED */}
       <div className="chat-header" style={{
-        position: "sticky", top: 0, zIndex: 10,
-        display: "flex", alignItems: "center", justifyContent: "space-between",
-        padding: "8px 16px", background: "#fff",
+        position: "sticky", top: 0, zIndex: 40,
+        display: "flex", flexDirection: "column", alignItems: "stretch",
+        gap: "8px",
+        padding: "10px 16px", background: "#fff",
         boxShadow: "0 2px 5px rgba(0,0,0,0.1)", borderBottom: "1px solid #ddd"
       }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "8px", flex: 1 }}>
-          <span style={{ fontSize: "18px" }}>{status === "online" ? "🟢" : status === "connecting" ? "🟡" : "🔴"}</span>
+        <span
+          style={{
+            fontSize: "11px",
+            fontWeight: 700,
+            letterSpacing: "0.04em",
+            color: "#9a3412",
+            textTransform: "uppercase",
+            whiteSpace: "nowrap",
+            overflow: "hidden",
+            textOverflow: "ellipsis"
+          }}
+        >
+          Akun TikTok yang sedang live: @{hostId || "-"}
+        </span>
+
+        <div style={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+          <span style={{ fontSize: "18px", flexShrink: 0 }}>
+            {status === "online" ? "🟢" : status === "connecting" ? "🟡" : "🔴"}
+          </span>
           <input
             type="text"
             placeholder="Username TikTok (tanpa @)"
@@ -337,7 +373,8 @@ export default function HostAssistant() {
             onChange={(e)=>setHostId(e.target.value)}
             style={{
               flex:1,
-              padding:"6px 12px",
+              minWidth: 0,
+              padding:"8px 12px",
               borderRadius:"999px",
               border:"1px solid #ccc",
               outline:"none",
@@ -345,21 +382,21 @@ export default function HostAssistant() {
               backgroundColor: status==="online"||status==="connecting" ? "#f5f5f5" : "#fff"
             }}
           />
-        </div>
 
-        <div style={{ display:"flex", gap:"6px" }}>
-          {status==="offline" ? (
-            <button onClick={startAssistant} style={buttonStyle} title="Mulai">▶️</button>
-          ) : (
-            <button onClick={stopAssistant} style={buttonStyle} title="Stop">⏹️</button>
-          )}
+          <div style={{ display:"flex", gap:"6px", flexShrink: 0, alignItems: "center" }}>
+            {status==="offline" ? (
+              <button onClick={startAssistant} style={buttonStyle} title="Mulai">▶️</button>
+            ) : (
+              <button onClick={stopAssistant} style={buttonStyle} title="Stop">⏹️</button>
+            )}
 
-          <button onClick={() => {
-              if(!hostId){ alert("Isi dulu Username TikTok"); return;}
-              setShowHighlight(prev => !prev);
-              if(!showHighlight) fetchHighlight();
-            }}
-            style={buttonStyle} title="Highlight Toko">🛍️</button>
+            <button onClick={() => {
+                if(!hostId){ alert("Isi dulu Username TikTok"); return;}
+                setShowHighlight(prev => !prev);
+                if(!showHighlight) fetchHighlight();
+              }}
+              style={buttonStyle} title="Highlight Toko">🛍️</button>
+          </div>
         </div>
       </div>
 
