@@ -6,7 +6,6 @@ import "./chat.css";
 
 export default function ChatContainer({ messages, fetchProducts, onSelectProduct, onAddAnswer }) {
   const containerRef = useRef(null);
-  const bottomRef = useRef(null);
   const [isAtBottom, setIsAtBottom] = useState(true);
 
   // detect scroll position
@@ -27,8 +26,12 @@ export default function ChatContainer({ messages, fetchProducts, onSelectProduct
 
   // auto scroll
   useEffect(() => {
-    if (isAtBottom) {
-      bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+    const container = containerRef.current;
+    if (container && isAtBottom) {
+      container.scrollTo({
+        top: container.scrollHeight,
+        behavior: "smooth"
+      });
     }
   }, [messages, isAtBottom]);
 
@@ -46,7 +49,6 @@ export default function ChatContainer({ messages, fetchProducts, onSelectProduct
           onAddAnswer={onAddAnswer}
         />
       ))}
-      <div ref={bottomRef} />
     </div>
   );
 }

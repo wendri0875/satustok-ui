@@ -5,6 +5,12 @@ import { useAuth } from "../auth/AuthProvider";
 import ProductThumbnail from "../components/ProductThumbnail";
 import SOSPanel from "../components/SOSPanel";
 
+const INITIAL_SCROLL_STATE = {
+  visible: false,
+  height: 36,
+  offset: 0
+};
+
 export default function ChatMessage({
   message,
   fetchProducts,
@@ -30,18 +36,44 @@ export default function ChatMessage({
   const [showHighlight, setShowHighlight] = useState(false);
   const [highlightData, setHighlightData] = useState(null);
   const [loadingHighlight, setLoadingHighlight] = useState(false);
-  const [pickerPlacement, setPickerPlacement] = useState("down");
-  const [highlightPlacement, setHighlightPlacement] = useState("down");
   const [pickerStyle, setPickerStyle] = useState(null);
   const [highlightStyle, setHighlightStyle] = useState(null);
+  const [pickerScrollState, setPickerScrollState] = useState(INITIAL_SCROLL_STATE);
 
   const pickerContainerRef = useRef(null);
   const pickerButtonRef = useRef(null);
   const highlightButtonRef = useRef(null);
   const pickerInputRef = useRef(null);
+  const pickerScrollRef = useRef(null);
 
   const backendUrl = import.meta.env.VITE_BACKEND_URL;
   const hasProduct = !!message.lastProductId;
+
+  const updatePickerScrollState = () => {
+    const el = pickerScrollRef.current;
+    if (!el) {
+      setPickerScrollState(INITIAL_SCROLL_STATE);
+      return;
+    }
+
+    const { scrollHeight, clientHeight, scrollTop } = el;
+    if (scrollHeight <= clientHeight + 2) {
+      setPickerScrollState(INITIAL_SCROLL_STATE);
+      return;
+    }
+
+    const trackHeight = Math.max(clientHeight - 148, 96);
+    const thumbHeight = Math.max((clientHeight / scrollHeight) * trackHeight, 36);
+    const maxOffset = Math.max(trackHeight - thumbHeight, 0);
+    const scrollRange = Math.max(scrollHeight - clientHeight, 1);
+    const offset = (scrollTop / scrollRange) * maxOffset;
+
+    setPickerScrollState({
+      visible: true,
+      height: thumbHeight,
+      offset
+    });
+  };
 
   const updateOverlayPlacement = () => {
     const viewport = window.visualViewport;
@@ -52,67 +84,27 @@ export default function ChatMessage({
     const viewportBottom = offsetTop + viewportHeight;
     const margin = 8;
 
-    if (pickerButtonRef.current) {
-      const rect = pickerButtonRef.current.getBoundingClientRect();
-      const panelWidth = Math.min(260, Math.max(220, viewportWidth - 24));
-      const estimatedPickerHeight = 520;
-      const spaceBelow = viewportBottom - rect.bottom - margin;
-      const spaceAbove = rect.top - offsetTop - margin;
-      const nextPlacement =
-        spaceBelow < estimatedPickerHeight && spaceAbove > spaceBelow ? "up" : "down";
-      const maxHeight = Math.max(
-        260,
-        Math.min(520, (nextPlacement === "up" ? spaceAbove : spaceBelow) - 4)
-      );
-      const left = Math.max(
-        offsetLeft + margin,
-        Math.min(rect.right - panelWidth, offsetLeft + viewportWidth - panelWidth - margin)
-      );
-      const top =
-        nextPlacement === "up"
-          ? Math.max(offsetTop + margin, rect.top - maxHeight - margin)
-          : Math.max(offsetTop + margin, Math.min(rect.bottom + margin, viewportBottom - maxHeight - margin));
+    const pickerWidth = Math.min(320, Math.max(260, viewportWidth - 24));
+    const pickerHeight = Math.max(260, Math.min(520, viewportHeight - 32));
+    setPickerStyle({
+      position: "fixed",
+      left: offsetLeft + (viewportWidth - pickerWidth) / 2,
+      top: offsetTop + Math.max(16, (viewportHeight - pickerHeight) / 2),
+      width: pickerWidth,
+      height: pickerHeight,
+      maxHeight: pickerHeight,
+    });
 
-      setPickerPlacement(nextPlacement);
-      setPickerStyle({
-        position: "fixed",
-        top,
-        left,
-        width: panelWidth,
-        maxHeight,
-      });
-    }
-
-    if (highlightButtonRef.current) {
-      const rect = highlightButtonRef.current.getBoundingClientRect();
-      const panelWidth = Math.min(280, Math.max(240, viewportWidth - 24));
-      const estimatedHighlightHeight = 240;
-      const spaceBelow = viewportBottom - rect.bottom - margin;
-      const spaceAbove = rect.top - offsetTop - margin;
-      const nextPlacement =
-        spaceBelow < estimatedHighlightHeight && spaceAbove > spaceBelow ? "up" : "down";
-      const maxHeight = Math.max(
-        180,
-        Math.min(280, (nextPlacement === "up" ? spaceAbove : spaceBelow) - 4)
-      );
-      const left = Math.max(
-        offsetLeft + margin,
-        Math.min(rect.right - panelWidth, offsetLeft + viewportWidth - panelWidth - margin)
-      );
-      const top =
-        nextPlacement === "up"
-          ? Math.max(offsetTop + margin, rect.top - maxHeight - margin)
-          : Math.max(offsetTop + margin, Math.min(rect.bottom + margin, viewportBottom - maxHeight - margin));
-
-      setHighlightPlacement(nextPlacement);
-      setHighlightStyle({
-        position: "fixed",
-        top,
-        left,
-        width: panelWidth,
-        maxHeight,
-      });
-    }
+    const highlightWidth = Math.min(320, Math.max(260, viewportWidth - 24));
+    const highlightHeight = Math.max(180, Math.min(320, viewportHeight - 32));
+    setHighlightStyle({
+      position: "fixed",
+      left: offsetLeft + (viewportWidth - highlightWidth) / 2,
+      top: offsetTop + Math.max(16, (viewportHeight - highlightHeight) / 2),
+      width: highlightWidth,
+      height: highlightHeight,
+      maxHeight: highlightHeight,
+    });
   };
 
   const loadProducts = async ({ search = "", nextPage = 1 } = {}) => {
@@ -183,6 +175,7 @@ export default function ChatMessage({
 
     const timer = window.setTimeout(() => {
       updateOverlayPlacement();
+      updatePickerScrollState();
       pickerInputRef.current?.scrollIntoView({
         block: "nearest",
         inline: "nearest",
@@ -191,6 +184,18 @@ export default function ChatMessage({
 
     return () => window.clearTimeout(timer);
   }, [showPicker]);
+
+  useEffect(() => {
+    if (!showPicker) {
+      return undefined;
+    }
+
+    const timer = window.setTimeout(() => {
+      updatePickerScrollState();
+    }, 0);
+
+    return () => window.clearTimeout(timer);
+  }, [showPicker, products.length, loading, page, searchTerm]);
 
   /* =========================
      FETCH PRODUCT DETAIL (SELECT *)
@@ -424,21 +429,31 @@ export default function ChatMessage({
                   borderRadius: 8,
                   boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                   zIndex: 9999,
+                  position: "fixed",
+                  overflow: "hidden"
+                }}
+              >
+              <div
+                ref={pickerScrollRef}
+                onScroll={updatePickerScrollState}
+                style={{
+                  height: "100%",
                   overflowY: "auto",
+                  paddingRight: 14,
                   scrollbarWidth: "thin",
                   scrollbarColor: "#f59e0b #fde7c7"
                 }}
               >
-              <div
-                style={{
-                  position: "sticky",
-                  top: 0,
-                  zIndex: 1,
-                  padding: 8,
-                  borderBottom: "1px solid #eee",
-                  background: "#fff"
-                }}
-              >
+                <div
+                  style={{
+                    position: "sticky",
+                    top: 0,
+                    zIndex: 1,
+                    padding: 8,
+                    borderBottom: "1px solid #eee",
+                    background: "#fff"
+                  }}
+                >
                 <div
                   style={{
                     display: "flex",
@@ -532,13 +547,17 @@ export default function ChatMessage({
               {!loading && (
                 <div
                   style={{
+                    position: "sticky",
+                    bottom: products.length > 3 ? 20 : 0,
+                    zIndex: 1,
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
                     gap: 8,
                     padding: 8,
                     borderTop: "1px solid #eee",
-                    fontSize: 11
+                    fontSize: 11,
+                    background: "#fff"
                   }}
                 >
                   <button
@@ -596,6 +615,33 @@ export default function ChatMessage({
                   }}
                 >
                   Geser ke atas/bawah untuk lihat produk lain
+                </div>
+              )}
+              </div>
+
+              {pickerScrollState.visible && (
+                <div
+                  style={{
+                    position: "absolute",
+                    top: 66,
+                    right: 4,
+                    bottom: 56,
+                    width: 6,
+                    borderRadius: 999,
+                    background: "#fde7c7",
+                    pointerEvents: "none"
+                  }}
+                >
+                  <div
+                    style={{
+                      width: "100%",
+                      height: pickerScrollState.height,
+                      transform: `translateY(${pickerScrollState.offset}px)`,
+                      borderRadius: 999,
+                      background: "linear-gradient(180deg, #f59e0b 0%, #ea580c 100%)",
+                      boxShadow: "0 0 0 1px rgba(255,255,255,0.7)"
+                    }}
+                  />
                 </div>
               )}
               </div>

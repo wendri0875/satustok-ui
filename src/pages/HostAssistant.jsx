@@ -49,11 +49,13 @@ export default function HostAssistant() {
 
     let reconnectTimer;
     const activeHostId = normalizeHostId(hostId);
+    let disposed = false;
+    let socket = null;
 
     const connect = () => {
-      if (wsRef.current) return;
+      if (disposed || socket) return;
 
-      const socket = new WebSocket(`${wsUrl}?hostId=${activeHostId}`);
+      socket = new WebSocket(`${wsUrl}?hostId=${activeHostId}`);
       wsRef.current = socket;
 
       socket.onopen = () => {
@@ -112,24 +114,33 @@ export default function HostAssistant() {
 
       socket.onclose = () => {
         console.log("WS CLOSED");
-        wsRef.current = null;
+        if (wsRef.current === socket) {
+          wsRef.current = null;
+        }
+        socket = null;
 
-        if (status === "online") {
+        if (!disposed && status === "online") {
           reconnectTimer = setTimeout(connect, 2000);
         }
       };
 
       socket.onerror = () => {
-        socket.close();
+        socket?.close();
       };
     };
 
     connect();
 
     return () => {
+      disposed = true;
       clearTimeout(reconnectTimer);
-      if (wsRef.current) {
-        wsRef.current.close();
+      if (socket) {
+        socket.close();
+        if (wsRef.current === socket) {
+          wsRef.current = null;
+        }
+        socket = null;
+      } else if (wsRef.current && normalizeHostId(hostId) === activeHostId) {
         wsRef.current = null;
       }
     };
@@ -337,10 +348,12 @@ export default function HostAssistant() {
   // UI
   // ===============================
   return (
-    <div className="chat-page" style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", fontFamily: "sans-serif" }}>
+    <div className="chat-page" style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", overscrollBehaviorY: "none", fontFamily: "sans-serif" }}>
       {/* HEADER FIXED */}
       <div className="chat-header" style={{
-        position: "sticky", top: 0, zIndex: 40,
+        position: "relative",
+        flex: "0 0 auto",
+        zIndex: 40,
         display: "flex", flexDirection: "column", alignItems: "stretch",
         gap: "8px",
         padding: "10px 16px", background: "#fff",
