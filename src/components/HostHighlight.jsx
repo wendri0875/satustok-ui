@@ -5,32 +5,15 @@ export default function HostHighlight({
   highlightText,
   setHighlightText,
   saveHighlight,
+  loadingHighlight = false,
   onClose
 }) {
-  const CONTENT_HEIGHT = 500;
-  const [editingHighlight, setEditingHighlight] = useState(false);
   const [savingHighlight, setSavingHighlight] = useState(false);
 
   const handleSave = async () => {
     setSavingHighlight(true);
-    const success = await saveHighlight();
+    await saveHighlight();
     setSavingHighlight(false);
-
-    if (success) {
-      setEditingHighlight(false);
-    }
-  };
-
-  const formatWA = (text) => {
-    if (!text) return "";
-
-    let formatted = text
-      .replace(/\*(.*?)\*/g, "<b>$1</b>")
-      .replace(/_(.*?)_/g, "<i>$1</i>")
-      .replace(/~(.*?)~/g, "<s>$1</s>")
-      .replace(/\n/g, "<br/>");
-
-    return formatted;
   };
 
   return (
@@ -51,32 +34,34 @@ export default function HostHighlight({
           position: "relative",
           width: "100%",
           maxWidth: "640px",
-          maxHeight: "85vh",
-          overflowY: "auto",
-          padding: "16px",
-          paddingTop: "40px",
-          background: "#f9f9f9",
-          border: "1px solid #ddd",
-          borderRadius: "8px",
+          height: "min(85vh, 680px)",
+          background: "linear-gradient(180deg, #fffaf5 0%, #fff7ed 100%)",
+          border: "1px solid #fed7aa",
+          borderRadius: "12px",
+          overflow: "hidden",
+          display: "flex",
+          flexDirection: "column",
+          boxShadow: "0 18px 45px rgba(249, 115, 22, 0.14)"
         }}
       >
-        {/* CLOSE BUTTON */}
         <button
           onClick={onClose}
           style={{
             position: "absolute",
-            top: "10px",
+            top: "12px",
             right: "12px",
-            background: "#eee",
+            background: "#fff7ed",
             borderRadius: "50%",
-            width: "26px",
-            height: "26px",
+            width: "28px",
+            height: "28px",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            border: "none",
+            border: "1px solid #fdba74",
             cursor: "pointer",
-            fontSize: "14px"
+            fontSize: "14px",
+            color: "#9a3412",
+            zIndex: 2
           }}
         >
           ✕
@@ -84,105 +69,95 @@ export default function HostHighlight({
 
         <div
           style={{
-            marginBottom: "12px",
+            margin: "16px 16px 12px",
             padding: "10px 12px",
             borderRadius: "8px",
-            background: "#e8f1ff",
-            border: "1px solid #cfe0ff",
-            borderLeft: "4px solid #2f6fe4",
-            color: "#0f2d6a",
+            background: "#ffedd5",
+            border: "1px solid #fdba74",
+            borderLeft: "4px solid #f97316",
+            color: "#9a3412",
             fontSize: "16px",
             fontWeight: 800,
-            letterSpacing: "0.2px"
+            letterSpacing: "0.2px",
+            paddingRight: "44px"
           }}
         >
-          {`INFORMASI STANDART TOKO ${hostId || "-"}`}
+          {`Data Umum Toko ${hostId || "-"}`}
         </div>
 
-        {!editingHighlight ? (
-          <>
-            {/* VIEW MODE */}
-            <div
-              style={{
-                lineHeight: "1.6",
-                fontSize: "14px",
-                height: `${CONTENT_HEIGHT}px`,
-                overflowY: "auto"
-              }}
-              dangerouslySetInnerHTML={{
-                __html: highlightText
-                  ? formatWA(highlightText)
-                  : "<span style='color:#999'>Belum ada highlight</span>"
-              }}
-            />
+        <div
+          style={{
+            padding: "0 16px 16px",
+            flex: 1,
+            minHeight: 0,
+            display: "flex",
+            flexDirection: "column"
+          }}
+        >
+          <textarea
+            value={highlightText}
+            onChange={(e) => setHighlightText(e.target.value)}
+            placeholder={loadingHighlight ? "Memuat data umum toko..." : "Tulis data umum toko di sini..."}
+            disabled={loadingHighlight}
+            style={{
+              width: "100%",
+              flex: 1,
+              minHeight: 0,
+              padding: "12px",
+              borderRadius: "10px",
+              border: "1px solid #fdba74",
+              resize: "none",
+              fontSize: "14px",
+              lineHeight: "1.6",
+              boxSizing: "border-box",
+              background: loadingHighlight ? "#fffaf5" : "#fff",
+              color: "#431407"
+            }}
+          />
+        </div>
 
-            <div style={{ marginTop: "12px" }}>
-              <button
-                onClick={() => setEditingHighlight(true)}
-                style={{
-                  background: "#1976d2",
-                  color: "#fff",
-                  border: "none",
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  cursor: "pointer"
-                }}
-              >
-                Edit
-              </button>
-            </div>
-          </>
-        ) : (
-          <>
-            {/* EDIT MODE */}
-            <textarea
-              value={highlightText}
-              onChange={(e) => setHighlightText(e.target.value)}
-              rows={10}
-              style={{
-                width: "100%",
-                height: `${CONTENT_HEIGHT}px`,
-                padding: "10px",
-                borderRadius: "6px",
-                border: "1px solid #ccc",
-                resize: "vertical",
-                fontSize: "14px",
-                lineHeight: "1.5",
-                boxSizing: "border-box"
-              }}
-            />
+        <div
+          style={{
+            padding: "12px 16px",
+            borderTop: "1px solid #fed7aa",
+            background: "#fffaf5",
+            display: "flex",
+            justifyContent: "flex-end",
+            gap: "8px",
+            boxShadow: "0 -8px 20px rgba(249, 115, 22, 0.08)"
+          }}
+        >
+          <button
+            onClick={onClose}
+            style={{
+              background: "#e5e7eb",
+              color: "#374151",
+              border: "none",
+              padding: "8px 14px",
+              borderRadius: "8px",
+              cursor: "pointer"
+            }}
+          >
+            Tutup
+          </button>
 
-            <div style={{ marginTop: "12px", display: "flex", gap: "8px" }}>
-              <button
-                onClick={handleSave}
-                disabled={savingHighlight}
-                style={{
-                  background: savingHighlight ? "#aaa" : "green",
-                  color: "#fff",
-                  border: "none",
-                  padding: "6px 12px",
-                  borderRadius: "6px",
-                  cursor: savingHighlight ? "not-allowed" : "pointer"
-                }}
-              >
-                {savingHighlight ? "Menyimpan..." : "Save"}
-              </button>
-
-              <button
-                onClick={() => setEditingHighlight(false)}
-                style={{
-                  background: "#999",
-                  color: "#fff",
-                  border: "none",
-                  padding: "6px 12px",
-                  borderRadius: "6px"
-                }}
-              >
-                Batal
-              </button>
-            </div>
-          </>
-        )}
+          <button
+            onClick={handleSave}
+            disabled={savingHighlight || loadingHighlight}
+            style={{
+              background: savingHighlight ? "#fcd34d" : "#f59e0b",
+              color: "#fff",
+              border: "none",
+              padding: "8px 16px",
+              borderRadius: "8px",
+              cursor: savingHighlight || loadingHighlight ? "not-allowed" : "pointer",
+              opacity: loadingHighlight ? 0.7 : 1,
+              fontWeight: 700
+            }}
+          >
+            {loadingHighlight ? "Memuat..." : savingHighlight ? "Menyimpan..." : "Save"}
+          </button>
+        </div>
       </div>
     </div>
   );

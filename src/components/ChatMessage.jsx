@@ -425,6 +425,7 @@ export default function ChatMessage({
                 style={{
                   ...pickerStyle,
                   background: "#fff",
+                  color: "#0f172a",
                   border: "1px solid #ddd",
                   borderRadius: 8,
                   boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
@@ -535,14 +536,14 @@ export default function ChatMessage({
                       cursor: "pointer",
                       alignItems: "center"
                     }}
-                  >
-                    <ProductThumbnail
-                      src={p.photoUrl}
-                      version={p.updated_at}
-                    />
-                    <span>{p.sku}</span>
-                  </div>
-                ))}
+                      >
+                        <ProductThumbnail
+                          src={p.photoUrl}
+                          version={p.updated_at}
+                        />
+                        <span style={{ color: "#0f172a", fontSize: 12 }}>{p.sku}</span>
+                      </div>
+                    ))}
 
               {!loading && (
                 <div

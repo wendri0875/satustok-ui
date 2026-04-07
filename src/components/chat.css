@@ -2,7 +2,7 @@
   display: flex;
   flex-direction: column;
   height: 100vh;
-  background: #f4f4f4;
+  background: linear-gradient(180deg, #121219 0%, #0b0b0f 100%);
 }
 
 .chat-header {
@@ -34,7 +34,7 @@
   -webkit-overflow-scrolling: touch;
   touch-action: pan-y;
   scrollbar-width: thin;
-  scrollbar-color: #f59e0b #fde7c7;
+  scrollbar-color: #25F4EE rgba(255,255,255,0.08);
 }
 
 .chat-container::-webkit-scrollbar {
@@ -42,35 +42,37 @@
 }
 
 .chat-container::-webkit-scrollbar-track {
-  background: #fde7c7;
+  background: rgba(255,255,255,0.08);
   border-radius: 999px;
 }
 
 .chat-container::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  background: linear-gradient(180deg, #25F4EE 0%, #FE2C55 100%);
   border-radius: 999px;
-  border: 2px solid #fde7c7;
+  border: 2px solid rgba(255,255,255,0.08);
 }
 
 .chat-container::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #f97316 0%, #c2410c 100%);
+  background: linear-gradient(180deg, #7df7f3 0%, #ff4f73 100%);
 }
 
 .chat-message {
-  background: #fff;
+  background: linear-gradient(180deg, rgba(28,28,34,0.96) 0%, rgba(22,22,28,0.98) 100%);
   padding: 8px 12px;
-  border-radius: 8px;
+  border-radius: 12px;
   max-width: 95%;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.24);
 }
 
 .chat-user {
   font-weight: bold;
   font-size: 12px;
   margin-bottom: 4px;
-  color: #555;
+  color: #25F4EE;
 }
 
 .chat-text {
   font-size: 14px;
+  color: #f8fafc;
 }

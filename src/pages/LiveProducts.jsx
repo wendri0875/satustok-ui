@@ -55,6 +55,10 @@ export default function LiveProductSatustok() {
         "ngrok-skip-browser-warning": "true",
       },
     });
+    if (!res.ok) {
+      const errorPayload = await res.json().catch(() => ({}));
+      throw new Error(errorPayload?.error || "Gagal mengambil data produk");
+    }
 
     const payload = await res.json();
     const rows = Array.isArray(payload) ? payload : (payload?.data || []);
@@ -88,8 +92,6 @@ setPagination(
         limit: payload?.pagination?.limit || PAGE_LIMIT,
       }
 );
-
-
   }, [user?.token, tiktokAccount, backendUrl, page, searchKeyword]);
 
   useEffect(() => {
@@ -456,8 +458,8 @@ const totalPages = Math.max(pagination.total_pages || 1, 1);
   // UI
   // ===============================
 return (
-  <div className="min-h-screen bg-gray-100 p-2">
-    <div className="w-full max-w-3xl mx-auto bg-white rounded-2xl shadow p-4">
+  <div className="min-h-screen bg-transparent p-2 text-slate-900">
+    <div className="w-full max-w-3xl mx-auto rounded-2xl border border-white/10 bg-white shadow p-4 text-slate-900">
 
       {/* Header Compact */}
       <div className="flex items-center gap-2 mb-4">

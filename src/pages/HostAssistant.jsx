@@ -35,6 +35,7 @@ export default function HostAssistant() {
 
   const [showHighlight, setShowHighlight] = useState(false);
   const [highlightText, setHighlightText] = useState("");
+  const [loadingHighlight, setLoadingHighlight] = useState(false);
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -254,6 +255,10 @@ export default function HostAssistant() {
         "ngrok-skip-browser-warning": "true",
       }
     });
+    if (!res.ok) {
+      const errorPayload = await res.json().catch(() => ({}));
+      throw new Error(errorPayload?.error || "Gagal mengambil data produk");
+    }
     const payload = await res.json();
 
     const rows = Array.isArray(payload) ? payload : (payload?.data || []);
@@ -322,18 +327,27 @@ export default function HostAssistant() {
   // FETCH / SAVE HIGHLIGHT
   // ===============================
   const fetchHighlight = async () => {
-    if (!hostId) return;
+    if (!user?.token || !hostId) return;
+    setLoadingHighlight(true);
     try {
-      const res = await fetch(`${backendUrl}/host/live-highlight?host_id=${hostId}`, {
+      const res = await fetch(`${backendUrl}/host/live-highlight?host_id=${encodeURIComponent(hostId)}`, {
         headers: { Authorization: `Bearer ${user.token}`, "ngrok-skip-browser-warning":"true" },
       });
+      if (!res.ok) {
+        throw new Error("Gagal mengambil data umum toko");
+      }
       const data = await res.json();
       setHighlightText(data?.highlight || "");
-    } catch (err) { console.error(err); }
+    } catch (err) {
+      console.error(err);
+      setHighlightText("");
+    } finally {
+      setLoadingHighlight(false);
+    }
   };
 
   const saveHighlight = async () => {
-    if (!hostId) return false;
+    if (!user?.token || !hostId) return false;
     try {
       const res = await fetch(`${backendUrl}/host/live-highlight`, {
         method: "POST",
@@ -348,7 +362,7 @@ export default function HostAssistant() {
   // UI
   // ===============================
   return (
-    <div className="chat-page" style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", overscrollBehaviorY: "none", fontFamily: "sans-serif" }}>
+    <div className="chat-page" style={{ display: "flex", flexDirection: "column", height: "100vh", overflow: "hidden", overscrollBehaviorY: "none", fontFamily: "sans-serif", background: "linear-gradient(180deg, #121219 0%, #0b0b0f 100%)", color: "#f8fafc" }}>
       {/* HEADER FIXED */}
       <div className="chat-header" style={{
         position: "relative",
@@ -356,15 +370,15 @@ export default function HostAssistant() {
         zIndex: 40,
         display: "flex", flexDirection: "column", alignItems: "stretch",
         gap: "8px",
-        padding: "10px 16px", background: "#fff",
-        boxShadow: "0 2px 5px rgba(0,0,0,0.1)", borderBottom: "1px solid #ddd"
+        padding: "12px 16px", background: "linear-gradient(180deg, rgba(18,18,25,0.98) 0%, rgba(24,24,33,0.98) 100%)",
+        boxShadow: "0 10px 30px rgba(0,0,0,0.3)", borderBottom: "1px solid rgba(255,255,255,0.08)"
       }}>
         <span
           style={{
             fontSize: "11px",
             fontWeight: 700,
             letterSpacing: "0.04em",
-            color: "#9a3412",
+            color: "#25F4EE",
             textTransform: "uppercase",
             whiteSpace: "nowrap",
             overflow: "hidden",
@@ -384,15 +398,22 @@ export default function HostAssistant() {
             value={hostId}
             disabled={status==="online"||status==="connecting"}
             onChange={(e)=>setHostId(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && status === "offline") {
+                e.preventDefault();
+                startAssistant();
+              }
+            }}
             style={{
               flex:1,
               minWidth: 0,
               padding:"8px 12px",
               borderRadius:"999px",
-              border:"1px solid #ccc",
+              border:"1px solid rgba(255,255,255,0.12)",
               outline:"none",
-              color:"#000",
-              backgroundColor: status==="online"||status==="connecting" ? "#f5f5f5" : "#fff"
+              color:"#f8fafc",
+              boxShadow:"inset 0 0 0 1px rgba(37,244,238,0.06)",
+              backgroundColor: status==="online"||status==="connecting" ? "rgba(255,255,255,0.08)" : "rgba(255,255,255,0.06)"
             }}
           />
 
@@ -405,10 +426,14 @@ export default function HostAssistant() {
 
             <button onClick={() => {
                 if(!hostId){ alert("Isi dulu Username TikTok"); return;}
-                setShowHighlight(prev => !prev);
-                if(!showHighlight) fetchHighlight();
+                if (!showHighlight) {
+                  setShowHighlight(true);
+                  fetchHighlight();
+                  return;
+                }
+                setShowHighlight(false);
               }}
-              style={buttonStyle} title="Highlight Toko">🛍️</button>
+              style={buttonStyle} title="Data Toko">📋</button>
           </div>
         </div>
       </div>
@@ -428,6 +453,7 @@ export default function HostAssistant() {
         highlightText={highlightText}
         setHighlightText={setHighlightText}
         saveHighlight={saveHighlight}
+        loadingHighlight={loadingHighlight}
         onClose={()=>setShowHighlight(false)}
       />}
     </div>
@@ -436,14 +462,13 @@ export default function HostAssistant() {
 
 // Minimal flat button style
 const buttonStyle = {
-  background:"#e0e0e0",
-  color:"#333",
-  border:"none",
+  background:"linear-gradient(135deg, rgba(37,244,238,0.18) 0%, rgba(254,44,85,0.2) 100%)",
+  color:"#fff",
+  border:"1px solid rgba(255,255,255,0.14)",
   padding:"6px 12px",
   borderRadius:"50%",
   cursor:"pointer",
   fontSize:"18px",
-  transition:"transform 0.2s, background 0.2s",
-  onMouseEnter: (e)=>{ e.currentTarget.style.transform="scale(1.1)"; e.currentTarget.style.background="#d5d5d5"; },
-  onMouseLeave: (e)=>{ e.currentTarget.style.transform="scale(1)"; e.currentTarget.style.background="#e0e0e0"; }
+  boxShadow:"0 10px 24px rgba(0,0,0,0.28)",
+  transition:"transform 0.2s, background 0.2s"
 };
